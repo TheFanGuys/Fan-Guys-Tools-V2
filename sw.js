@@ -1,5 +1,5 @@
 /* Install atomically; activate only after all app tabs close. */
-const CACHE='fanguys-field-v2-5';
+const CACHE='fanguys-field-v2-6';
 const FILES=["./", "./icon-512.png", "./apple-touch-icon.png", "./manifest.json", "./index.html", "./icon-192.png", "./materials/index.html", "./survey/index.html", "./layout/index.html", "./layout/vendor/pdf.min.mjs", "./layout/vendor/pdf.worker.min.mjs", "./estimate/index.html", "./tech/index.html", "./shared/fgt.js", "./shared/jspdf.js", "./shared/workspace.js", "./shared/est-pdf.js", "./shared/workspace.css", "./shared/store.js", "./shared/home.css", "./shared/mark.png", "./shared/pdf-delivery.js", "./shared/home.js", "./shared/vendor/field-sans.ttf", "./shared/vendor/babel.min.js", "./shared/vendor/react-dom.min.js", "./shared/vendor/manrope-700.ttf", "./shared/vendor/manrope-800.ttf", "./shared/vendor/manrope-500.ttf", "./shared/vendor/manrope-400.ttf", "./shared/vendor/manrope-600.ttf", "./shared/vendor/react.min.js"];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES))));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('fanguys-field-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
