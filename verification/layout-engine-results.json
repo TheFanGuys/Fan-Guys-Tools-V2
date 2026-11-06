@@ -1,5 +1,5 @@
 {
-  "passed": 23,
+  "passed": 25,
   "tests": [
     "Fan placement triggers persistence without opening an edit sheet",
     "Undo/redo of fan placement restores counts and numbering",
@@ -9,6 +9,8 @@
     "Rooms need two corners and preserve their label",
     "Racking keeps positive width and height regardless of corner order",
     "FA connections reject self-connections and duplicates",
+    "Two-point plan calibration scales measured span and supports undo",
+    "Two-point calibration rejects coincident points",
     "Cable takeoff follows drawn bends, not just endpoint distance",
     "Routing avoids an intervening rack when a clear detour exists",
     "Hidden fans, walls, columns, devices and wiring cannot be selected",

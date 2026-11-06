@@ -26,7 +26,7 @@ The migration test includes a local IndexedDB test library under `verification/v
 
 ## Layout plan imports
 
-Layout now exposes Import PDF / photo floor plan in its menu. It rasterizes page 1 of a PDF locally using bundled PDF.js, or accepts an image. Enter the measured width of the entire page/image in feet, tap Set scale, and verify a second known dimension before laying out fans. The imported background is saved as compressed JPEG in the job record. For drawings with margins, measure the full imported page width rather than only the building footprint. A future two-point on-canvas scale tool is recommended. Building footprints do not supply interior obstructions or mounting heights.
+Layout now exposes Import PDF / photo floor plan in its menu. It lets you choose a PDF page and rasterizes that page locally using bundled PDF.js, or accepts an image. For accurate calibration, enter a known distance in feet, tap its two endpoints on the drawing, and verify a second dimension before laying out fans. The older full-image-width option remains available. The imported background is saved as compressed JPEG in the job record. For drawings with margins, measure the full imported page width rather than only the building footprint. The background can be locked after calibration to avoid dragging it while placing fans. Building footprints do not supply interior obstructions or mounting heights.
 
 ## Survey breaker planning
 
@@ -34,7 +34,7 @@ Circuit Summary shows Planning only - not verified, rounding 125% of the *refere
 
 ## Offline updates
 
-Service-worker cache is `fanguys-field-v2-4`. It registers relative to the folder. Settings -> Check for app updates asks the worker to update; close all app tabs and reopen to activate a waiting version. Test an airplane-mode cold open on your iPhone.
+Service-worker cache is `fanguys-field-v2-9`. It registers relative to the folder. Settings -> Check for app updates asks the worker to update; close all app tabs and reopen to activate a waiting version. Test an airplane-mode cold open on your iPhone.
 
 ## Your work
 

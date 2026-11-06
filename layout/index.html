@@ -96,7 +96,7 @@ body.shared #jobTap{pointer-events:none;}
 
 /* bg adjust panel */
 #bgpanel{position:fixed; left:0; right:0; bottom:0; z-index:8; padding:12px 14px calc(env(safe-area-inset-bottom) + 12px);
-  background:var(--panel); border-top:1px solid var(--line); display:none;}
+  background:var(--panel); border-top:1px solid var(--line); display:none; max-height:48dvh;overflow-y:auto;}
 #bgpanel.show{display:block;}
 #bgpanel .r{display:flex; align-items:center; gap:12px; margin-bottom:12px;}
 #bgpanel label{font-size:12px; color:var(--muted); width:64px;}
@@ -231,7 +231,10 @@ textarea.inp{height:84px; padding:10px 12px; resize:vertical; line-height:1.35; 
   </div>
   <div class="r"><label for="bgWidthFeet">Full image width (ft)</label><input class="inp" type="number" id="bgWidthFeet" min="0.1" step="0.1" placeholder="Measured building width"></div>
   <button class="btn" id="bgCalibrate">Set scale from measured width</button>
-  <p class="hint" style="margin-top:10px;">Import PDF page 1 or a photo of a floor plan, enter the measured full image width in feet, then tap Set scale. Confirm another field dimension before placing fans. Drag to move; pinch zooms the view.</p>
+  <div class="r"><label for="bgKnownFeet">Known distance (ft)</label><input class="inp" type="number" id="bgKnownFeet" min="0.1" step="0.1" placeholder="e.g. 40"></div>
+  <button class="btn primary" id="bgTwoPoint">Tap two points on the drawing</button>
+  <button class="btn" id="bgLock">Lock drawing</button>
+  <p class="hint" style="margin-top:10px;">For best accuracy, enter a measured distance and tap its two ends on the plan. Check a second dimension before placing fans. Lock the background to prevent accidental movement.</p>
 </div>
 
 <div id="gpspanel">
@@ -520,7 +523,7 @@ let activeBrand=0;
 let pending=null;          // {type:'room'|'wall', p1} | {type:'relocate', id}
 let editId=null;           // fan currently in edit sheet
 let sel=null;              // {kind:'fan'|'room'|'wall', id}
-let bgMode=false;
+let bgMode=false, calibration=null;
 let VIEWONLY=false;        // shared-link read-only mode
 const LAYER_NAMES={fans:'Fans',walls:'Walls',rooms:'Rooms',columns:'Columns',racking:'Racking / fills',devices:'Panels / controllers',wiring:'FA / comm wiring',background:'Background plan'};
 let layerVisible=Object.fromEntries(Object.keys(LAYER_NAMES).map(k=>[k,true]));
@@ -879,7 +882,7 @@ const THEMES={
 let TH=THEMES.dark, themeMode="dark";
 addEventListener("fgt-theme-change",e=>applyTheme(e.detail));
 function applyTheme(mode){themeMode=(mode==="light")?"light":"dark";TH=THEMES[themeMode];document.documentElement.dataset.theme=themeMode;FGTStore.setItem("fgt-theme",JSON.stringify(themeMode));document.body.classList.toggle("light",themeMode==="light");try{FGTStore.setItem("lp_theme",themeMode);}catch(e){}if(typeof render==="function")render();}
-function render(){syncTaps();if(persistenceReady&&!VIEWONLY)scheduleSave();try{drawScene(ctx, view, FAN_R*DPR, DPR, true);}catch(e){console.error("render error:",e);} try{updateColReadout();}catch(e){}}
+function render(){syncTaps();if(persistenceReady&&!VIEWONLY)scheduleSave();try{drawScene(ctx, view, FAN_R*DPR, DPR, true);if(calibration?.points.length){ctx.save();ctx.strokeStyle="#ff7a1a";ctx.fillStyle="#fff";ctx.lineWidth=3*DPR;const points=calibration.points.map(p=>w2s(...p));if(points.length===2){ctx.beginPath();ctx.moveTo(points[0][0]*DPR,points[0][1]*DPR);ctx.lineTo(points[1][0]*DPR,points[1][1]*DPR);ctx.stroke();}for(const [x,y] of points){ctx.beginPath();ctx.arc(x*DPR,y*DPR,8*DPR,0,7);ctx.fill();ctx.stroke();}ctx.restore();}}catch(e){console.error("render error:",e);} try{updateColReadout();}catch(e){}}
 function gridLabel(col){
   const g=S.bayGrid; if(!g||!g.ux) return null;
   const i=Math.round((col.x-g.px)/g.ux);
@@ -1326,9 +1329,10 @@ cv.addEventListener("wheel",e=>{e.preventDefault();const[mx,my]=getXY(e);const w
   view.x=mx-wm[0]*view.scale;view.y=my-wm[1]*view.scale;render();},{passive:false});
 
 function startGesture(sx,sy){
+  if(calibration){g={sx,sy,lx:sx,ly:sy,moved:false,calibration:true};return;}
   g={sx,sy,lx:sx,ly:sy,moved:false,drag:null,pre:null};
   if(VIEWONLY)return;
-  if(bgMode){g.drag={kind:"bg"};return;}
+  if(bgMode){if(!S.bg?.locked)g.drag={kind:"bg"};return;}
   if(tool==="pan"){
     if(sel&&sel.kind==="link"){const o=selObj();if(o&&o.pts){for(let i=0;i<o.pts.length;i++){const[hx,hy]=w2s(o.pts[i][0],o.pts[i][1]);if(Math.hypot(sx-hx,sy-hy)<=18){g.drag={kind:"linkpt",link:o,index:i};g.pre=snap();return;}}}}
     if(sel&&sel.kind==="wall"){const w=selObj();if(w){const end=wallEndHit(w,sx,sy);
@@ -1344,6 +1348,7 @@ function startGesture(sx,sy){
 }
 function moveGesture(sx,sy){
   if(!g)return;
+  if(g.calibration){g.moved=Math.hypot(sx-g.sx,sy-g.sy)>SLOP;return;}
   const dx=sx-g.lx,dy=sy-g.ly;
   if(Math.hypot(sx-g.sx,sy-g.sy)>SLOP)g.moved=true;
   if(!g.moved){return;}
@@ -1367,6 +1372,7 @@ function moveObj(d,dx,dy){
 }
 function endGesture(){
   if(!g)return;
+  if(g.calibration){if(!g.moved)handleTap(g.sx,g.sy);g=null;return;}
   if(g.moved){
     if(g.drag&&g.drag.kind==="wallpt")snapWallPt(g.drag);
     if(g.pre){undoStack.push(g.pre);if(undoStack.length>25)undoStack.shift();redoStack=[];refreshUndo();}
@@ -1398,6 +1404,7 @@ function movePinch(e){const[x1,y1]=getXY(e.touches[0]),[x2,y2]=getXY(e.touches[1
 
 function handleTap(sx,sy){
   const w=s2w(sx,sy);
+  if(calibration){calibration.points.push(w);if(calibration.points.length===1){showBanner('Tap second end of the known distance');render();}else{try{calibrateBackground(calibration.points[0],calibration.points[1],calibration.feet);showBanner('Scale set. Verify another dimension.');}catch(err){uiAlert(err.message);}calibration=null;document.getElementById('bgpanel').classList.add('show');render();}return;}
   if(bgMode)return;
   if(pending&&pending.type==="relocate"){
     pushHistory();
@@ -2007,13 +2014,15 @@ document.getElementById("photoInput").addEventListener("change",async e=>{
       const pdfjs=await import('./vendor/pdf.min.mjs');
       pdfjs.GlobalWorkerOptions.workerSrc=new URL('./vendor/pdf.worker.min.mjs',location.href).href;
       const pdf=await pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;
-      const page=await pdf.getPage(1),vp=page.getViewport({scale:1});
+      let pageNumber=1;
+      if(pdf.numPages>1){const answer=prompt('PDF has '+pdf.numPages+' pages. Which page should be imported?','1');if(answer===null){await pdf.destroy();return;}pageNumber=Number(answer);if(!Number.isInteger(pageNumber)||pageNumber<1||pageNumber>pdf.numPages){await pdf.destroy();uiAlert('Enter a page number from 1 to '+pdf.numPages+'.');return;}}
+      const page=await pdf.getPage(pageNumber),vp=page.getViewport({scale:1});
       const scale=Math.min(2,1600/Math.max(vp.width,vp.height));
       const viewport=page.getViewport({scale}),canvas=document.createElement('canvas');
       canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);
       await page.render({canvasContext:canvas.getContext('2d'),canvas,viewport}).promise;
       setPlanBackground(canvas);await pdf.destroy();
-      uiAlert('Imported PDF page 1. Enter a measured full image width to set scale.');
+      uiAlert('Imported PDF page '+pageNumber+'. Tap two points on a known dimension to set scale.');
     }else if(file.type.startsWith('image/')){
       const url=URL.createObjectURL(file),im=new Image();
       im.onload=()=>{URL.revokeObjectURL(url);setPlanBackground(im);};
@@ -2026,8 +2035,22 @@ function loadBg(cb){if(!S.bg){bgImg=null;if(cb)cb();return;}
 function enterBgMode(){if(!S.bg)return;pushHistory();bgMode=true;
   document.getElementById("bgOpacity").value=Math.round((S.bg.opacity==null?1:S.bg.opacity)*100);
   document.getElementById("bgScale").value=Math.round((S.bg.scale||1)*100);
-  document.getElementById("bgpanel").classList.add("show");ctxEl.classList.remove("show");showBanner("Adjusting photo");}
-function exitBgMode(){bgMode=false;document.getElementById("bgpanel").classList.remove("show");hideBanner();refreshCtx();scheduleSave();}
+  document.getElementById("bgLock").textContent=S.bg.locked?'Unlock drawing':'Lock drawing';
+  document.getElementById("bgpanel").classList.add("show");ctxEl.classList.remove("show");showBanner("Adjusting drawing");}
+function exitBgMode(){calibration=null;bgMode=false;document.getElementById("bgpanel").classList.remove("show");hideBanner();refreshCtx();scheduleSave();}
+function calibrateBackground(a,b,feet){
+  if(!S.bg||!Number.isFinite(feet)||feet<=0)throw Error('Enter a measured distance greater than zero.');
+  const old=S.bg.scale||1,dx=b[0]-a[0],dy=b[1]-a[1],span=Math.hypot(dx,dy);
+  if(!Number.isFinite(span)||span<0.001)throw Error('Tap two different points on the drawing.');
+  const next=old*feet/span;if(next<0.00001||next>1000)throw Error('Measured distance is outside the supported scale.');
+  const B=S.bg,angle=(B.rot||0)*Math.PI/180,cx=(B.x||0)+B.w*old/2,cy=(B.y||0)+B.h*old/2;
+  const wx=a[0]-cx,wy=a[1]-cy,ux=(wx*Math.cos(angle)+wy*Math.sin(angle))/old,uy=(-wx*Math.sin(angle)+wy*Math.cos(angle))/old;
+  const ncx=a[0]-(ux*Math.cos(angle)-uy*Math.sin(angle))*next,ncy=a[1]-(ux*Math.sin(angle)+uy*Math.cos(angle))*next;
+  pushHistory();B.scale=next;B.x=ncx-B.w*next/2;B.y=ncy-B.h*next/2;B.calibration={knownFeet:feet,sourceSpan:span,at:new Date().toISOString()};
+  document.getElementById('bgScale').value=Math.round(next*100);render();scheduleSave();
+}
+document.getElementById('bgTwoPoint').addEventListener('click',()=>{if(!S.bg)return;const feet=Number(document.getElementById('bgKnownFeet').value);if(!Number.isFinite(feet)||feet<=0){uiAlert('Enter the measured distance in feet first.');return;}calibration={feet,points:[]};document.getElementById('bgpanel').classList.remove('show');showBanner('Tap first end of the known distance');});
+document.getElementById('bgLock').addEventListener('click',()=>{if(!S.bg)return;pushHistory();S.bg.locked=!S.bg.locked;document.getElementById('bgLock').textContent=S.bg.locked?'Unlock drawing':'Lock drawing';render();});
 document.getElementById("bgOpacity").addEventListener("input",e=>{if(S.bg){S.bg.opacity=e.target.value/100;render();}});
 document.getElementById("bgScale").addEventListener("input",e=>{if(S.bg){S.bg.scale=e.target.value/100;render();}});
 document.getElementById("bgCalibrate").addEventListener("click",()=>{if(!S.bg)return;const feet=Number(document.getElementById("bgWidthFeet").value);if(!Number.isFinite(feet)||feet<=0){uiAlert("Enter a measured full image width in feet.");return;}pushHistory();S.bg.scale=feet/S.bg.w;document.getElementById("bgScale").value=Math.round(S.bg.scale*100);render();scheduleSave();uiAlert("Scaled image width to "+feet+" ft. Check another known distance before using the plan.");});
