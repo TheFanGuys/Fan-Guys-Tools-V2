@@ -1,0 +1,12 @@
+{
+  "passed": 7,
+  "tests": [
+    "EMT sticks convert to the correct footage",
+    "By-foot materials keep footage units",
+    "Companion nuts track box clips when not manually overridden",
+    "Manually selected nut quantity is retained",
+    "Export excludes zero-quantity catalog and custom items",
+    "Plain text retains ampersands; print HTML escapes markup",
+    "Materials PDF is a real, parseable PDF payload"
+  ]
+}

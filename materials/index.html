@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="../shared/store.js"></script>
+<script src="../shared/jspdf.js"></script>
+<script src="../shared/pdf-delivery.js"></script>
+<script src="../shared/fgt.js" data-tool="materials"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, " />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  <title>Field List ⚡</title>
+  
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #f3f4f6; font-family: 'Outfit', 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+    input[type=number] { -moz-appearance: textfield; }
+    * { -webkit-tap-highlight-color: transparent; }
+    .cat-img { width: 42px; height: 42px; object-fit: cover; border-radius: 10px; display: block; }
+    .cat-img-wrap { width: 42px; height: 42px; border-radius: 10px; background: #f1f5f9; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
+  </style>
+<link rel="stylesheet" href="../shared/workspace.css">
+<script src="../shared/workspace.js" defer></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="../shared/vendor/react.min.js"></script>
+  <script src="../shared/vendor/react-dom.min.js"></script>
+  <script src="../shared/vendor/babel.min.js"></script>
+
+  <script type="text/babel">
+    const { useState, useCallback, useEffect } = React;
+    const SAVE_KEY = 'fg_materials_autosave_v1';
+    const loadSaved = () => { try { return JSON.parse(FGTStore.getItem(SAVE_KEY)) || {}; } catch(e) { return {}; } };
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // MATERIALS DATA — Easy to edit!
+    //
+    // Each item can be a plain string OR an object with special flags:
+    //   { name: "...", emtFt: true }  → qty = sticks, auto-shows feet (×10)
+    //   { name: "...", byFt: true }   → qty = feet, shown as "X ft"
+    //
+    // To add an item:    add a string or object to any items: [ ] array
+    // To add a category: copy a { category, img, items } block and paste it
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    const MATERIALS = [
+      {
+        category: "EMT Conduit",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/78/EMT_tubing_conduit_after_deburring_J._Morris_CC_BY-SA-3.0.jpg/120px-EMT_tubing_conduit_after_deburring_J._Morris_CC_BY-SA-3.0.jpg",
+        items: [
+          { name: '1/2" EMT', emtFt: true },
+          { name: '3/4" EMT', emtFt: true },
+        ],
+      },
+      {
+        category: "Couplings & Connectors",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/EMT_offset_for_coupling_1_J._Morris_CC_BY-SA-3.0.jpg/120px-EMT_offset_for_coupling_1_J._Morris_CC_BY-SA-3.0.jpg",
+        items: ['1/2" Couplings', '1/2" Connectors', '3/4" Couplings', '3/4" Connectors'],
+      },
+      {
+        category: "Straps & Hangers",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/EMT_offset_to_work_box_and_coupling_J._Morris_CC_BY-SA-3.0.jpg/120px-EMT_offset_to_work_box_and_coupling_J._Morris_CC_BY-SA-3.0.jpg",
+        items: [
+          '1/2" 1-Hole EMT Strap', '3/4" 1-Hole EMT Strap',
+          '1/2" Conduit Hanger Minerlac', '3/4" Conduit Hanger Minerlac',
+          '1/2" EMT Strut Clamp', '3/4" EMT Strut Clamp',
+        ],
+      },
+      {
+        category: "Caddy Hardware",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/EMT_offset_close_bend_for_two_work_boxes_J._Morris_CC_BY-SA-3.0.jpg/120px-EMT_offset_close_bend_for_two_work_boxes_J._Morris_CC_BY-SA-3.0.jpg",
+        items: [
+          'Caddy Clips 812M24', 'Caddy Clips 812M24 SM',
+          'Caddy Box Clip M24S', 'Caddy Conduit Support Bar 812MB18AR1',
+        ],
+      },
+      {
+        category: "Boxes & Covers",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Junction_box_anatomy.jpg/120px-Junction_box_anatomy.jpg",
+        items: ['4 Sq Boxes Deep', '4 Sq Box Covers'],
+      },
+      {
+        category: "Flex & Fittings",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f9/Flexible_metal_conduit_with_connector.jpg/120px-Flexible_metal_conduit_with_connector.jpg",
+        items: [
+          { name: '1/2" Metal Flex (Greenfield)', byFt: true },
+          '1/2" Flex Connectors Straight',
+          '1/2" Flex Connectors 90°',
+          '1/2" Flex to EMT Connectors',
+        ],
+      },
+      {
+        category: "Strut & Strut Hardware",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Strut_channel_assorted.jpg/120px-Strut_channel_assorted.jpg",
+        items: [
+          "Thin Strut 10'", "Thick Strut 10'",
+          '1/4" Spring Nuts',
+          '3/8" Spring Nuts',
+          '1/4" Malleable Beam Clamps',
+          { name: '1/4" Threaded Rod', byFt: true },
+          { name: '3/8" Threaded Rod', byFt: true },
+          { name: '1/2" Threaded Rod', byFt: true },
+        ],
+      },
+      {
+        category: "Bolts, Nuts & Washers",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/Bolts_and_nuts.jpg/120px-Bolts_and_nuts.jpg",
+        items: [
+          '1/4" x20 x 1/2" Bolts',
+          '1/4" x20 x 1" Bolts',
+          '1/4" x20 x 1-1/2" Bolts',
+          '3/8" x 1" Bolts',
+          '3/8" x 1-1/2" Bolts',
+          '3/8" x 2" Bolts',
+          '1/4" Nut',
+          '1/4" Nylock Nut',
+          '3/8" Nut',
+          '3/8" Nylock Nut',
+          '1" Flat Washers / Fender',
+          '3/8" Flat Washer / Fender',
+          '1/4" Lock Washer',
+          '3/8" Lock Washer',
+          '1/2" Lock Washer',
+        ],
+      },
+      {
+        category: "Fasteners & Anchors",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/38/Assorted_fasteners.jpg/120px-Assorted_fasteners.jpg",
+        items: [
+          '1/4" x 1-1/4" Tapcons',
+          '1/4" Self Drilling Screws',
+          '1/4" x 3" Toggle Bolts',
+          'Plastic Anchor Kit',
+          'Sheetrock Anchor Kit',
+          '#8 x 1" All Purpose Screws',
+          '#8 x 1-1/2" All Purpose Screws',
+          '#8 x 2" All Purpose Screws',
+        ],
+      },
+      {
+        category: "#12 THHN Wire",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Wire_spool.jpg/120px-Wire_spool.jpg",
+        items: [
+          "#12 THHN 500' Stranded Brown", "#12 THHN 500' Stranded Orange",
+          "#12 THHN 500' Stranded Yellow", "#12 THHN 500' Stranded Green",
+          "#12 THHN 500' Stranded White", "#12 THHN 500' Stranded Black",
+          "#12 THHN 500' Stranded Red", "#12 THHN 500' Stranded Blue",
+        ],
+      },
+      {
+        category: "#10 THHN Wire",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Wire_spool.jpg/120px-Wire_spool.jpg",
+        items: [
+          "#10 THHN 500' Stranded Brown", "#10 THHN 500' Stranded Orange",
+          "#10 THHN 500' Stranded Yellow", "#10 THHN 500' Stranded Green",
+          "#10 THHN 500' Stranded White", "#10 THHN 500' Stranded Black",
+          "#10 THHN 500' Stranded Red", "#10 THHN 500' Stranded Blue",
+        ],
+      },
+      {
+        category: "SOOW Cord",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Wire_spool.jpg/120px-Wire_spool.jpg",
+        items: [
+          { name: "12/4 SOOW Cord", byFt: true },
+          { name: "14/4 SOOW Cord", byFt: true },
+          { name: "12/3 SOOW Cord", byFt: true },
+          { name: "14/3 SOOW Cord", byFt: true },
+          "Arlington LPCG507 — 1/2\" NPT (385–0.600\")",
+          "Arlington LPCG757 — 3/4\" NPT (385–0.750\")",
+        ],
+      },
+      {
+        category: "Data / Low Voltage",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Cat_6_cable.jpg/120px-Cat_6_cable.jpg",
+        items: [
+          "Cat 5/6 — 500'",
+          "Cat 5/6 — 1000'",
+          "18 AWG FPLP — 500'",
+          "18 AWG FPLP — 1000'",
+          "RJ45 Passthrough Plugs",
+        ],
+      },
+      {
+        category: "Wire Nuts",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/Array_of_twist-on_wire_connectors_aka_wire_nuts_in_different_sizes.jpg/120px-Array_of_twist-on_wire_connectors_aka_wire_nuts_in_different_sizes.jpg",
+        items: ['Orange Wire Nuts', 'Yellow Wire Nuts', 'Tan Wire Nuts', 'Red Wire Nuts', 'Blue Wire Nuts'],
+      },
+      {
+        category: "Terminals & Tape",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/84/Electrical_tape.jpg/120px-Electrical_tape.jpg",
+        items: [
+          'Yellow Ring Terminals — #10 Stud',
+          'Yellow Fork Terminals — #10 Stud',
+          '12" Tie Wraps', 'Black Electric Tape', 'Brown Tape', 'Orange Tape',
+          'Yellow Tape', 'Green Tape', 'Red Tape', 'Blue Tape', 'White Tape',
+        ],
+      },
+    ];
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // END MATERIALS DATA
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    // Normalize: items can be strings or objects
+    function norm(i) { return typeof i === "string" ? { name: i } : i; }
+
+    // How a quantity shows on the final list/print
+    function qtyDisplay(item, qty) {
+      const { emtFt, byFt } = norm(item);
+      if (emtFt) return `${qty} stick${qty !== 1 ? "s" : ""} · ${qty * 10} ft`;
+      if (byFt)  return `${qty} ft`;
+      return String(qty);
+    }
+
+    // Small hint shown under item name while entering qty
+    function unitHint(item) {
+      const { emtFt, byFt } = norm(item);
+      if (emtFt) return "sticks · 10 ft each";
+      if (byFt)  return "enter feet";
+      return null;
+    }
+
+    // Fallback SVG icons when photo fails / offline
+    const FALLBACKS = {
+      "EMT Conduit":           <svg viewBox="0 0 40 40" fill="none" width="32" height="32"><rect x="2" y="15" width="36" height="6" rx="3" fill="#94a3b8"/><rect x="2" y="15" width="5" height="6" rx="2" fill="#64748b"/><rect x="33" y="15" width="5" height="6" rx="2" fill="#64748b"/><rect x="2" y="22" width="36" height="5" rx="2.5" fill="#b0bec5"/></svg>,
+      "Couplings & Connectors":<svg viewBox="0 0 40 40" fill="none" width="32" height="32"><rect x="0" y="16" width="10" height="8" rx="2" fill="#94a3b8"/><rect x="30" y="16" width="10" height="8" rx="2" fill="#94a3b8"/><rect x="9" y="13" width="22" height="14" rx="5" fill="#64748b"/><rect x="13" y="17" width="14" height="6" rx="2" fill="#94a3b8" opacity="0.35"/></svg>,
+      "Straps & Hangers":      <svg viewBox="0 0 40 40" fill="none" width="32" height="32"><rect x="10" y="5" width="20" height="5" rx="2.5" fill="#94a3b8"/><path d="M11 10 Q11 30 20 30 Q29 30 29 10" stroke="#64748b" strokeWidth="3.5" fill="none" strokeLinecap="round"/><circle cx="20" cy="20" r="6" fill="none" stroke="#94a3b8" strokeWidth="2.5"/></svg>,
+      "Caddy Hardware":        <svg viewBox="0 0 40 40" fill="none" width="32" height="32"><rect x="5" y="5" width="30" height="6" rx="3" fill="#64748b"/><path d="M11 11 L11 28 Q11 34 20 34 Q29 34 29 28 L29 11" stroke="#64748b" strokeWidth="3.5" fill="none"/><line x1="11" y1="22" x2="29" y2="22" stroke="#94a3b8" strokeWidth="2" strokeDasharray="3 2"/></svg>,
+      "Boxes & Covers":        <svg viewBox="0 0 40 40" fill="none" width="32" height="32"><rect x="4" y="5" width="32" height="30" rx="3" fill="#64748b"/><rect x="6" y="7" width="28" height="26" rx="2" fill="#94a3b8"/><circle cx="4" cy="20" r="3" fill="#475569"/><circle cx="36" cy="20" r="3" fill="#475569"/><rect x="12" y="14" width="16" height="12" rx="1.5" fill="#f1f5f9" opacity="0.3"/></svg>,
+      "Flex & Fittings":       <svg viewBox="0 0 40 40" fill="none" width="32" height="32"><path d="M2 20 C6 13,10 27,14 20 C18 13,22 27,26 20 C30 13,34 27,38 20" stroke="#64748b" strokeWidth="5" fill="none" strokeLinecap="round"/></svg>,
+      "Strut & Strut Hardware":     <svg viewBox="0 0 40 40" fill="none" width="32" height="32"><rect x="2" y="10" width="36" height="20" rx="2" fill="#64748b"/><rect x="4" y="12" width="32" height="16" rx="1.5" fill="var(--ws-bg)"/><rect x="4" y="12" width="32" height="4" rx="1" fill="#cbd5e1"/><rect x="4" y="24" width="32" height="4" rx="1" fill="#cbd5e1"/><circle cx="30" cy="32" r="6" fill="#475569"/><circle cx="30" cy="32" r="3.5" fill="#94a3b8"/></svg>,
+      "Bolts, Nuts & Washers":    <svg viewBox="0 0 40 40" fill="none" width="32" height="32"><rect x="15" y="2" width="10" height="6" rx="2" fill="#64748b"/><line x1="12" y1="5" x2="28" y2="5" stroke="#94a3b8" strokeWidth="1.5"/><rect x="18" y="8" width="4" height="24" rx="1.5" fill="#94a3b8"/><path d="M18 10 L15 11.5 M18 14 L15 15.5 M18 18 L15 19.5 M18 22 L15 23.5" stroke="#64748b" strokeWidth="1" strokeLinecap="round"/><path d="M14 32 L26 32 L24 38 L16 38 Z" fill="#64748b"/></svg>,
+      "Fasteners & Anchors":       <svg viewBox="0 0 40 40" fill="none" width="32" height="32"><rect x="17" y="2" width="6" height="5" rx="1.5" fill="#64748b"/><line x1="15" y1="4.5" x2="25" y2="4.5" stroke="#94a3b8" strokeWidth="1.5"/><rect x="18.5" y="7" width="3" height="22" rx="1" fill="#94a3b8"/><path d="M18.5 9 L16 10 M18.5 12 L16 13 M18.5 15 L16 16 M18.5 18 L16 19 M18.5 21 L16 22" stroke="#64748b" strokeWidth="1" strokeLinecap="round"/><rect x="5" y="30" width="30" height="6" rx="2" fill="#64748b" opacity="0.4"/></svg>,
+      "#12 THHN Wire":         <svg viewBox="0 0 40 40" fill="none" width="32" height="32"><circle cx="20" cy="20" r="17" fill="#64748b"/><circle cx="20" cy="20" r="11" fill="#475569"/><circle cx="20" cy="20" r="5" fill="#334155"/><path d="M20 3 A17 17 0 0 1 37 20" stroke="#f59e0b" strokeWidth="3" fill="none" strokeLinecap="round"/><path d="M37 20 A17 17 0 0 1 20 37" stroke="#f59e0b" strokeWidth="3" fill="none" strokeLinecap="round" opacity="0.6"/></svg>,
+      "#10 THHN Wire":         <svg viewBox="0 0 40 40" fill="none" width="32" height="32"><circle cx="20" cy="20" r="17" fill="#64748b"/><circle cx="20" cy="20" r="11" fill="#475569"/><circle cx="20" cy="20" r="5" fill="#334155"/><path d="M20 3 A17 17 0 0 1 37 20" stroke="#f59e0b" strokeWidth="3" fill="none" strokeLinecap="round"/><path d="M37 20 A17 17 0 0 1 20 37" stroke="#f59e0b" strokeWidth="3" fill="none" strokeLinecap="round" opacity="0.6"/></svg>,
+      "SOOW Cord":             <svg viewBox="0 0 40 40" fill="none" width="32" height="32"><circle cx="20" cy="20" r="17" fill="#64748b"/><circle cx="20" cy="20" r="11" fill="#475569"/><circle cx="20" cy="20" r="5" fill="#334155"/><path d="M20 3 A17 17 0 0 1 37 20" stroke="var(--ws-line)" strokeWidth="3" fill="none" strokeLinecap="round"/><path d="M37 20 A17 17 0 0 1 20 37" stroke="var(--ws-line)" strokeWidth="3" fill="none" strokeLinecap="round" opacity="0.7"/><path d="M20 37 A17 17 0 0 1 3 20" stroke="var(--ws-line)" strokeWidth="3" fill="none" strokeLinecap="round" opacity="0.4"/></svg>,
+      "Data / Low Voltage":    <svg viewBox="0 0 40 40" fill="none" width="32" height="32"><rect x="13" y="5" width="18" height="16" rx="2.5" fill="#64748b"/><rect x="16" y="19" width="12" height="7" rx="1.5" fill="#475569"/><line x1="17" y1="8" x2="17" y2="19" stroke="#94a3b8" strokeWidth="1.8"/><line x1="21" y1="8" x2="21" y2="19" stroke="#94a3b8" strokeWidth="1.8"/><line x1="25" y1="8" x2="25" y2="19" stroke="#94a3b8" strokeWidth="1.8"/><path d="M2 34 C6 28,10 38,14 34" stroke="#3b82f6" strokeWidth="3" fill="none" strokeLinecap="round"/></svg>,
+      "Wire Nuts":             <svg viewBox="0 0 40 40" fill="none" width="32" height="32"><path d="M13 36 L20 8 L27 36 Z" fill="#64748b"/><path d="M13 36 Q20 39 27 36 L27 32 Q20 35 13 32 Z" fill="#475569"/><path d="M14 28 Q20 32 26 28" stroke="#94a3b8" strokeWidth="1.8" fill="none"/><path d="M15 21 Q20 25 25 21" stroke="#94a3b8" strokeWidth="1.8" fill="none"/></svg>,
+      "Terminals & Tape":      <svg viewBox="0 0 40 40" fill="none" width="32" height="32"><circle cx="20" cy="20" r="17" fill="#64748b"/><circle cx="20" cy="20" r="9" fill="var(--ws-bg)"/><circle cx="20" cy="20" r="5" fill="var(--ws-line)"/></svg>,
+    };
+
+    const SWATCHES = {
+      Brown:"#92400e", Orange:"#c2410c", Yellow:"#ca8a04",
+      Green:"#15803d", Red:"#b91c1c", Blue:"#1d4ed8",
+      Black:"#18181b", White:"#cbd5e1", Tan:"#b5986a",
+    };
+    function getSwatch(name) {
+      for (const [c, h] of Object.entries(SWATCHES)) {
+        if (name.includes(c)) return h;
+      }
+      return null;
+    }
+
+    function CatPhoto({ src, category }) {
+      const [failed, setFailed] = useState(false);
+      if (failed || !src) return FALLBACKS[category] || <span style={{fontSize:22}}>⚡</span>;
+      return <img className="cat-img" src={src} alt={category} onError={()=>setFailed(true)} />;
+    }
+
+    // ── Export: plain text (only filled items) ────────────────────────────────
+    function buildText(jobName, jobLocation, quantities, customs) {
+      const date = new Date().toLocaleDateString("en-US", {year:"numeric",month:"long",day:"numeric"});
+      let t = `MATERIAL LIST\n${"═".repeat(44)}\nJob:      ${jobName||"—"}\nLocation: ${jobLocation||"—"}\nDate:     ${date}\n${"═".repeat(44)}\n\n`;
+      MATERIALS.forEach(({ category, items }) => {
+        const filled = items.map(norm).filter(i => (quantities[i.name]||0) > 0);
+        if (!filled.length) return;
+        t += `── ${category.toUpperCase()} ──\n`;
+        filled.forEach(i => {
+          const qty = quantities[i.name];
+          t += `  ${qtyDisplay(i, qty).padEnd(22)}  ${i.name}\n`;
+        });
+        t += "\n";
+      });
+      const filledCustoms = customs.filter(c => c.name.trim() && c.qty > 0);
+      if (filledCustoms.length) {
+        t += `── CUSTOM ITEMS ──\n`;
+        filledCustoms.forEach(c => { t += `  ${String(c.qty).padEnd(22)}  ${c.name}\n`; });
+      }
+      return t;
+    }
+
+    // ── Export: print HTML (only filled items, back button, print button) ─────
+    function htmlText(s) { return String(s == null ? "" : s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+    function buildPrintHtml(jobName, jobLocation, quantities, customs) {
+      const date = new Date().toLocaleDateString("en-US", {year:"numeric",month:"long",day:"numeric"});
+      let rows = "";
+      MATERIALS.forEach(({ category, items }) => {
+        const filled = items.map(norm).filter(i => (quantities[i.name]||0) > 0);
+        if (!filled.length) return;
+        rows += `<tr class="cat"><td colspan="2">${category}</td></tr>`;
+        filled.forEach(i => {
+          const qty = quantities[i.name];
+          rows += `<tr><td>${i.name}</td><td class="qty">${qtyDisplay(i, qty)}</td></tr>`;
+        });
+      });
+      const filledCustoms = customs.filter(c => c.name.trim() && c.qty > 0);
+      if (filledCustoms.length) {
+        rows += `<tr class="cat"><td colspan="2">Custom Items</td></tr>`;
+        filledCustoms.forEach(c => { rows += `<tr><td>${htmlText(c.name)}</td><td class="qty">${c.qty}</td></tr>`; });
+      }
+      return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Material List — ${jobName||"Job"}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,sans-serif;font-size:10pt;padding:20px 28px;color:#111}
+.toolbar{display:flex;gap:10px;margin-bottom:20px}
+.btn-back{display:inline-flex;align-items:center;gap:6px;background:#111827;color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.btn-print{display:inline-flex;align-items:center;gap:6px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+header{border-bottom:3px solid #111;padding-bottom:12px;margin-bottom:14px}
+h1{font-size:18pt;font-weight:800;margin-bottom:6px}
+.meta div{font-size:9.5pt;color:#444;line-height:1.9}.meta strong{display:inline-block;width:72px;color:#111}
+table{width:100%;border-collapse:collapse}
+tr{border-bottom:1px solid #e5e7eb}
+td{padding:5px 8px;font-size:10pt;vertical-align:middle}
+tr.cat td{background:#111;color:#fff;font-weight:700;font-size:8pt;letter-spacing:1px;padding:5px 8px}
+td.qty{text-align:right;font-weight:700;width:120px;color:#1d4ed8}
+footer{margin-top:16px;border-top:1px solid #ccc;padding-top:8px;font-size:8pt;color:#888;display:flex;justify-content:space-between}
+@media print{.toolbar{display:none!important}body{padding:0}}
+</style></head><body>
+<div class="toolbar">
+  <button class="btn-back" onclick="window.close()">← Back to App</button>
+  <button class="btn-print" onclick="window.print()">🖨 Print / Save PDF</button>
+</div>
+<header>
+  <h1>⚡ Material List</h1>
+  <div class="meta">
+    <div><strong>Job:</strong>${htmlText(jobName||"—")}</div>
+    <div><strong>Location:</strong>${htmlText(jobLocation||"—")}</div>
+    <div><strong>Date:</strong>${date}</div>
+  </div>
+</header>
+<table>${rows||"<tr><td colspan='2' style='padding:16px;color:#888'>No items entered.</td></tr>"}</table>
+<footer>
+  <span>Field List — Electrical Material Tracker</span>
+  <span>Printed ${new Date().toLocaleTimeString()}</span>
+</footer>
+<\/body></html>`;
+    }
+
+    // ── Stepper ───────────────────────────────────────────────────────────────
+    function Stepper({ value, onChange }) {
+      const active = (value||0) > 0;
+      return (
+        <div style={{display:"flex",alignItems:"center",flexShrink:0}}>
+          <button onClick={()=>onChange(Math.max(0,(value||0)-1))} style={{
+            width:38,height:42,border:"1.5px solid #e5e7eb",borderRight:"none",
+            borderRadius:"8px 0 0 8px",background:"var(--ws-raised)",color:"var(--ws-text)",
+            fontSize:20,fontWeight:700,cursor:"pointer",display:"flex",
+            alignItems:"center",justifyContent:"center",
+            opacity:active?1:0.35,fontFamily:"inherit",
+          }}>−</button>
+          <input type="number" min="0" value={value||""} placeholder="0"
+            onChange={e=>onChange(Math.max(0,parseInt(e.target.value)||0))}
+            style={{
+              width:52,height:42,textAlign:"center",border:"1.5px solid #e5e7eb",
+              borderLeft:"none",borderRight:"none",fontSize:15,fontFamily:"inherit",
+              outline:"none",background:"var(--ws-panel)",padding:0,
+              color:active?"#1d4ed8":"var(--ws-muted)",fontWeight:active?700:400,
+            }}
+          />
+          <button onClick={()=>onChange((value||0)+1)} style={{
+            width:38,height:42,border:"1.5px solid",
+            borderRadius:"0 8px 8px 0",
+            background:active?"var(--ws-accent)":"var(--ws-raised)",
+            borderColor:active?"#1d4ed8":"var(--ws-line)",
+            color:active?"var(--ws-panel)":"#374151",
+            fontSize:20,fontWeight:700,cursor:"pointer",display:"flex",
+            alignItems:"center",justifyContent:"center",fontFamily:"inherit",
+          }}>+</button>
+        </div>
+      );
+    }
+
+    // ── Category Section ──────────────────────────────────────────────────────
+    function CategorySection({ category, img, items, quantities, onQtyChange }) {
+      const [open, setOpen] = useState(true);
+      const filled = items.map(norm).filter(i=>(quantities[i.name]||0)>0).length;
+      return (
+        <div style={{background:"var(--ws-panel)",borderRadius:14,marginBottom:10,overflow:"hidden",boxShadow:"0 1px 3px rgba(0,0,0,0.07)"}}>
+          <button onClick={()=>setOpen(o=>!o)} style={{
+            width:"100%",background:"none",border:"none",padding:"12px 16px",
+            display:"flex",alignItems:"center",gap:12,cursor:"pointer",
+            borderBottom:open?"1px solid #f3f4f6":"none",
+          }}>
+            <div className="cat-img-wrap"><CatPhoto src={img} category={category}/></div>
+            <span style={{fontSize:15,fontWeight:700,color:"var(--ws-text)",flex:1,fontFamily:"'Field Sans',Arial,sans-serif",textAlign:"left"}}>{category}</span>
+            <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+              {filled>0 && (
+                <span style={{fontSize:11,fontWeight:600,color:"#1d4ed8",background:"#eff6ff",borderRadius:10,padding:"2px 8px",border:"1px solid #bfdbfe",fontFamily:"'Field Sans',Arial,sans-serif"}}>
+                  {filled} entered
+                </span>
+              )}
+              <span style={{fontSize:11,color:"var(--ws-muted)",display:"inline-block",transform:open?"rotate(180deg)":"rotate(0)",transition:"transform 0.2s"}}>▼</span>
+            </div>
+          </button>
+
+          {open && items.map((rawItem, idx) => {
+            const item = norm(rawItem);
+            const qty = quantities[item.name] || 0;
+            const swatch = getSwatch(item.name);
+            const hint = unitHint(item);
+            const liveLabel = qty > 0 ? qtyDisplay(item, qty) : null;
+            return (
+              <div key={item.name} style={{
+                display:"flex",alignItems:"center",justifyContent:"space-between",
+                padding:"10px 16px",gap:12,
+                background:qty>0?"#eff6ff":idx%2===0?"var(--ws-panel)":"#fafafa",
+                borderBottom:"1px solid #f3f4f6",
+              }}>
+                <div style={{display:"flex",flexDirection:"column",gap:2,flex:1,minWidth:0}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                    {swatch && <span style={{width:11,height:11,borderRadius:"50%",background:swatch,flexShrink:0,border:"1.5px solid rgba(0,0,0,0.15)",display:"inline-block"}}/>}
+                    <span style={{fontSize:14,lineHeight:1.35,color:qty>0?"#1e3a5f":"#374151",fontWeight:qty>0?600:400,fontFamily:"'Field Sans',Arial,sans-serif"}}>
+                      {item.name}
+                    </span>
+                    {item.name==="Caddy Box Clip M24S" && qty>0 && (
+                      <span style={{fontSize:10,fontWeight:600,color:"#d97706",background:"#fffbeb",border:"1px solid #fcd34d",borderRadius:6,padding:"1px 6px",fontFamily:"'Field Sans',Arial,sans-serif"}}>
+                        → {qty} × 1/4" Nut auto-added
+                      </span>
+                    )}
+                  </div>
+                  {hint && (
+                    <span style={{fontSize:10,color:"var(--ws-muted)",paddingLeft:swatch?19:0,fontFamily:"'Field Sans',Arial,sans-serif"}}>
+                      {liveLabel ? `→ ${liveLabel}` : hint}
+                    </span>
+                  )}
+                </div>
+                <Stepper value={qty} onChange={v=>onQtyChange(item.name, v)}/>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    // ── Preview Modal (filled items only) ─────────────────────────────────────
+    function PreviewModal({ onClose, onExport, jobName, jobLocation, quantities, customs }) {
+      const filledCats = MATERIALS.map(({ category, img, items }) => ({
+        category, img,
+        rows: items.map(norm).filter(i => (quantities[i.name]||0) > 0),
+      })).filter(c => c.rows.length > 0);
+      const filledCustoms = customs.filter(c => c.name.trim() && c.qty > 0);
+      const totalItems = filledCats.reduce((s,c)=>s+c.rows.length,0) + filledCustoms.length;
+
+      return (
+        <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:2200,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:"var(--ws-panel)",borderRadius:"20px 20px 0 0",width:"100%",maxWidth:920,maxHeight:"85dvh",display:"flex",flexDirection:"column",paddingTop:12}}>
+            <div style={{width:36,height:4,background:"var(--ws-line)",borderRadius:2,margin:"0 auto 12px"}}/>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 20px 12px",borderBottom:"1px solid #f3f4f6",flexShrink:0}}>
+              <div>
+                <h2 style={{fontSize:20,fontWeight:800,color:"var(--ws-text)",fontFamily:"'Field Sans',Arial,sans-serif"}}>Preview</h2>
+                <div style={{fontSize:12,color:"var(--ws-muted)",fontFamily:"'Field Sans',Arial,sans-serif"}}>{totalItems} item{totalItems!==1?"s":""} selected</div>
+              </div>
+              <button onClick={onClose} style={{background:"none",border:"none",fontSize:22,color:"var(--ws-muted)",cursor:"pointer",padding:4}}>✕</button>
+            </div>
+            <div style={{padding:"10px 20px",borderBottom:"1px solid #f3f4f6",flexShrink:0}}>
+              <div style={{display:"flex",gap:16,flexWrap:"wrap",fontSize:13,color:"var(--ws-muted)",fontFamily:"'Field Sans',Arial,sans-serif"}}>
+                <span><strong style={{color:"var(--ws-text)"}}>Job:</strong> {jobName||"—"}</span>
+                <span><strong style={{color:"var(--ws-text)"}}>Loc:</strong> {jobLocation||"—"}</span>
+                <span><strong style={{color:"var(--ws-text)"}}>Date:</strong> {new Date().toLocaleDateString()}</span>
+              </div>
+            </div>
+
+            <div style={{overflowY:"auto",flex:1,padding:"12px 20px"}}>
+              {totalItems === 0 && (
+                <div style={{textAlign:"center",padding:"40px 0",color:"var(--ws-muted)",fontFamily:"'Field Sans',Arial,sans-serif"}}>
+                  No quantities entered yet.
+                </div>
+              )}
+              {filledCats.map(({ category, img, rows }) => (
+                <div key={category} style={{marginBottom:16}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                    <div style={{width:20,height:20,borderRadius:5,overflow:"hidden",flexShrink:0,background:"#f1f5f9",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                      <CatPhoto src={img} category={category}/>
+                    </div>
+                    <div style={{fontSize:10,fontWeight:700,letterSpacing:1.5,color:"var(--ws-muted)",textTransform:"uppercase",fontFamily:"'Field Sans',Arial,sans-serif"}}>{category}</div>
+                  </div>
+                  {rows.map(item => {
+                    const qty = quantities[item.name];
+                    const swatch = getSwatch(item.name);
+                    return (
+                      <div key={item.name} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #f3f4f6"}}>
+                        <div style={{display:"flex",alignItems:"center",gap:7}}>
+                          {swatch && <span style={{width:9,height:9,borderRadius:"50%",background:swatch,flexShrink:0,border:"1.5px solid rgba(0,0,0,0.1)",display:"inline-block"}}/>}
+                          <span style={{fontSize:13,color:"#1e3a5f",fontFamily:"'Field Sans',Arial,sans-serif"}}>{item.name}</span>
+                        </div>
+                        <span style={{fontSize:13,fontWeight:700,color:"#1d4ed8",textAlign:"right",fontFamily:"'Field Sans',Arial,sans-serif",flexShrink:0,paddingLeft:12}}>
+                          {qtyDisplay(item, qty)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+              {filledCustoms.length > 0 && (
+                <div style={{marginBottom:16}}>
+                  <div style={{fontSize:10,fontWeight:700,letterSpacing:1.5,color:"var(--ws-muted)",textTransform:"uppercase",marginBottom:6,fontFamily:"'Field Sans',Arial,sans-serif"}}>Custom Items</div>
+                  {filledCustoms.map(c => (
+                    <div key={c.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #f3f4f6"}}>
+                      <span style={{fontSize:13,color:"#1e3a5f",fontFamily:"'Field Sans',Arial,sans-serif"}}>{c.name}</span>
+                      <span style={{fontSize:13,fontWeight:700,color:"#1d4ed8",fontFamily:"'Field Sans',Arial,sans-serif"}}>{c.qty}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div style={{padding:"12px 20px 20px",borderTop:"1px solid #e5e7eb",display:"flex",gap:10,flexShrink:0}}>
+              <button onClick={onClose} style={{flex:1,background:"var(--ws-bg)",border:"none",borderRadius:10,padding:"13px",fontSize:15,fontWeight:600,color:"var(--ws-muted)",cursor:"pointer",fontFamily:"'Field Sans',Arial,sans-serif"}}>Close</button>
+              <button onClick={onExport} style={{flex:2,background:"var(--ws-accent)",border:"none",borderRadius:10,padding:"13px",fontSize:15,fontWeight:700,color:"var(--ws-panel)",cursor:"pointer",fontFamily:"'Field Sans',Arial,sans-serif"}}>Export ↑</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ── Export Sheet ──────────────────────────────────────────────────────────
+    function createMaterialPDF(jobName,jobLocation,quantities,customs){
+      const doc=new window.jspdf.jsPDF({unit:'pt',format:'letter'}),clean=window.FGTPDF.clean;
+      doc.setFontSize(20);doc.text('Fan Guys - Materials',36,48);let y=76;doc.setFontSize(11);
+      const lines=buildText(jobName,jobLocation,quantities,customs).split('\n');
+      for(const line of lines){const wrapped=doc.splitTextToSize(clean(line),540);for(const row of wrapped){if(y>744){doc.addPage();y=48;}doc.text(row,36,y);y+=14;}y+=2;}
+      return doc;
+    }
+    function ExportSheet({ onClose, jobName, jobLocation, quantities, customs }) {
+      const [copied, setCopied] = useState(false);
+      const text = buildText(jobName, jobLocation, quantities, customs);
+      const filledCount = MATERIALS.reduce((s,{items})=>s+items.map(norm).filter(i=>(quantities[i.name]||0)>0).length,0)
+        + customs.filter(c=>c.name.trim()&&c.qty>0).length;
+
+      const copy=async()=>{try{if(navigator.clipboard&&navigator.clipboard.writeText)await navigator.clipboard.writeText(text);else{const box=document.createElement('textarea');box.value=text;document.body.appendChild(box);box.select();const ok=document.execCommand('copy');box.remove();if(!ok)throw Error('Clipboard unavailable. Use Share or PDF.');}setCopied(true);setTimeout(()=>setCopied(false),2500);}catch(e){alert(e.message);}};
+      const share=async()=>{if(!navigator.share)return copy();try{await navigator.share({title:'Material List - '+(jobName||'Job'),text});}catch(e){if(e.name!=='AbortError')alert('Sharing failed: '+e.message);}};
+      const email = () => { window.location.href=`mailto:?subject=${encodeURIComponent("Material List — "+(jobName||"Job"))}&body=${encodeURIComponent(text)}`; };
+      const sms   = () => { window.location.href=`sms:?&body=${encodeURIComponent(text)}`; };
+      const pdf=async()=>{try{await window.FGTPDF.deliver(createMaterialPDF(jobName,jobLocation,quantities,customs),'FanGuys-materials.pdf');}catch(e){alert('PDF failed: '+e.message);}};
+      const print = () => { const w=window.open("","_blank"); if(w){w.document.write(buildPrintHtml(jobName,jobLocation,quantities,customs));w.document.close();setTimeout(()=>w.print(),350);} };
+
+      const tiles = [
+        {icon:"↑",              label:"Share",           sub:"Native share sheet", fn:share},
+        {icon:copied?"✓":"⎘",  label:copied?"Copied!":"Copy", sub:"To clipboard", fn:copy },
+        {icon:"✉",              label:"Email",           sub:"Opens mail app",     fn:email},
+        {icon:"💬",             label:"Text",            sub:"Opens Messages",     fn:sms  },
+      ];
+
+      return (
+        <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:2200,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:"var(--ws-panel)",borderRadius:"20px 20px 0 0",width:"100%",maxWidth:920,paddingBottom:24}}>
+            <div style={{width:36,height:4,background:"var(--ws-line)",borderRadius:2,margin:"12px auto 16px"}}/>
+            <div style={{padding:"0 20px"}}>
+              <h2 style={{fontSize:20,fontWeight:800,color:"var(--ws-text)",marginBottom:4,fontFamily:"'Field Sans',Arial,sans-serif"}}>Export List</h2>
+              <p style={{fontSize:13,color:"var(--ws-muted)",marginBottom:18,fontFamily:"'Field Sans',Arial,sans-serif"}}>
+                {filledCount} item{filledCount!==1?"s":""} selected · {new Date().toLocaleDateString()}
+              </p>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+                {tiles.map(({icon,label,sub,fn})=>(
+                  <button key={label} onClick={fn} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,background:"var(--ws-raised)",border:"1.5px solid #e5e7eb",borderRadius:12,padding:"16px 12px",cursor:"pointer",fontFamily:"'Field Sans',Arial,sans-serif",textAlign:"center"}}>
+                    <span style={{fontSize:24,marginBottom:2}}>{icon}</span>
+                    <span style={{fontSize:14,fontWeight:700,color:"var(--ws-text)"}}>{label}</span>
+                    <span style={{fontSize:11,color:"var(--ws-muted)"}}>{sub}</span>
+                  </button>
+                ))}
+              </div>
+              <button onClick={pdf} style={{width:"100%",display:"flex",alignItems:"center",gap:14,background:"var(--ws-raised)",border:"1.5px solid #e5e7eb",borderRadius:12,padding:"14px 18px",cursor:"pointer",fontFamily:"'Field Sans',Arial,sans-serif",marginBottom:10,textAlign:"left"}}>
+                <span style={{fontSize:22}}>🖨</span>
+                <div>
+                  <div style={{fontSize:14,fontWeight:700,color:"var(--ws-text)"}}>Save / Share PDF</div>
+                  <div style={{fontSize:11,color:"var(--ws-muted)"}}>Downloadable PDF · selected items only</div>
+                </div>
+              </button>
+              <button onClick={print} style={{width:"100%",padding:12,background:"none",border:"none",color:"var(--ws-muted)"}}>Print in browser</button><button onClick={onClose} style={{width:"100%",background:"var(--ws-bg)",border:"none",borderRadius:10,padding:"13px",fontSize:15,fontWeight:600,color:"var(--ws-muted)",cursor:"pointer",fontFamily:"'Field Sans',Arial,sans-serif"}}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ── Main App ──────────────────────────────────────────────────────────────
+    function nextMaterialQuantities(q,item,val){const next={...q,[item]:Math.max(0,Number(val)||0)};if(item==='Caddy Box Clip M24S'){const old=q['1/4" Nut']||0;if(old===0||old===(q[item]||0))next['1/4" Nut']=next[item];}return next;}
+    function App() {
+      const [saved] = useState(loadSaved);
+      const [jobName, setJobName]           = useState(saved.jobName || "");
+      const [jobLocation, setJobLocation]   = useState(saved.jobLocation || "");
+      const [quantities, setQuantities]     = useState(saved.quantities || {});
+      const [customs, setCustoms]           = useState(Array.isArray(saved.customs) && saved.customs.length ? saved.customs : [{id:1,name:"",qty:0}]);
+      // Auto-save to this phone so a reload or closed tab never wipes the list
+      useEffect(() => {
+        try { FGTStore.setItem(SAVE_KEY, JSON.stringify({ jobName, jobLocation, quantities, customs })); } catch(e) {}
+      }, [jobName, jobLocation, quantities, customs]);
+      const [modal, setModal]               = useState(null);
+      const [filterFilled, setFilterFilled] = useState(false);
+      const [search, setSearch] = useState("");
+
+      const BOX_CLIP = 'Caddy Box Clip M24S';
+      const CLIP_NUT  = '1/4" Nut';
+      const setQty=useCallback((item,val)=>setQuantities(q=>nextMaterialQuantities(q,item,val)),[]);
+
+      const addCustom    = ()=>setCustoms(c=>[...c,{id:Date.now(),name:"",qty:0}]);
+      const removeCustom = id=>setCustoms(c=>c.filter(i=>i.id!==id));
+      const updateCustom = (id,field,val)=>setCustoms(c=>c.map(i=>i.id===id?{...i,[field]:val}:i));
+
+      const totalFilled = MATERIALS.reduce((s,{items})=>s+items.map(norm).filter(i=>(quantities[i.name]||0)>0).length,0)
+        + customs.filter(c=>c.name.trim()&&c.qty>0).length;
+
+      const clearAll = ()=>{
+        if(window.confirm("Clear all quantities and job info?")){
+          setQuantities({});setCustoms([{id:1,name:"",qty:0}]);setJobName("");setJobLocation("");
+        }
+      };
+
+      const shared = {jobName,jobLocation,quantities,customs};
+      const inputStyle = {display:"block",width:"100%",border:"1.5px solid #e5e7eb",borderRadius:8,fontSize:15,color:"var(--ws-text)",padding:"10px 12px",fontFamily:"'Field Sans',Arial,sans-serif",outline:"none",background:"var(--ws-raised)"};
+      const labelStyle = {display:"block",fontSize:11,fontWeight:600,color:"var(--ws-muted)",marginBottom:5,fontFamily:"'Field Sans',Arial,sans-serif"};
+
+      return (
+        <div style={{minHeight:"100vh",background:"var(--ws-bg)",maxWidth:920,margin:"0 auto"}}>
+
+          {/* Header */}
+          <header style={{background:"var(--ws-text)",padding:"14px 20px",position:"sticky",top:0,zIndex:50,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <div>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <span style={{fontSize:22}}>⚡</span>
+                <span style={{fontSize:20,fontWeight:800,color:"var(--ws-panel)",letterSpacing:-0.5,fontFamily:"'Field Sans',Arial,sans-serif"}}>Field List</span>
+              </div>
+              <div style={{fontSize:11,color:"var(--ws-muted)",letterSpacing:0.5,marginTop:1,fontFamily:"'Field Sans',Arial,sans-serif"}}>Electrical Material Tracker</div>
+            </div>
+            {totalFilled>0 && (
+              <div style={{background:"var(--ws-accent)",color:"var(--ws-panel)",borderRadius:20,padding:"4px 14px",fontSize:13,fontWeight:700,fontFamily:"'Field Sans',Arial,sans-serif"}}>
+                {totalFilled} item{totalFilled!==1?"s":""}
+              </div>
+            )}
+          </header>
+
+          <div style={{padding:"14px 12px"}}>
+
+            {/* Job Info */}
+            <div style={{background:"var(--ws-panel)",borderRadius:14,marginBottom:10,overflow:"hidden",boxShadow:"0 1px 3px rgba(0,0,0,0.07)"}}>
+              <div style={{fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color:"var(--ws-muted)",padding:"12px 16px 10px",borderBottom:"1px solid #f3f4f6",fontFamily:"'Field Sans',Arial,sans-serif"}}>
+                Job Information
+              </div>
+              <div style={{padding:"12px 16px 16px",display:"flex",flexDirection:"column",gap:10}}>
+                <div>
+                  <label style={labelStyle}>Job Name</label>
+                  <input style={inputStyle} placeholder="e.g. Westside Office Build-Out" value={jobName} onChange={e=>setJobName(e.target.value)}/>
+                </div>
+                <div>
+                  <label style={labelStyle}>Location / Address</label>
+                  <input style={inputStyle} placeholder="e.g. 123 Main St, Suite 400" value={jobLocation} onChange={e=>setJobLocation(e.target.value)}/>
+                </div>
+              </div>
+            </div>
+
+            {/* Search */}
+            <div style={{position:"relative",marginBottom:10}}>
+              <span style={{position:"absolute",left:13,top:"50%",transform:"translateY(-50%)",fontSize:16,color:"var(--ws-muted)",pointerEvents:"none"}}>🔍</span>
+              <input
+                style={{display:"block",width:"100%",border:"1.5px solid #e5e7eb",borderRadius:10,fontSize:15,color:"var(--ws-text)",padding:"11px 12px 11px 40px",fontFamily:"'Field Sans',Arial,sans-serif",outline:"none",background:"var(--ws-panel)",boxSizing:"border-box"}}
+                placeholder="Search materials…"
+                value={search}
+                onChange={e=>setSearch(e.target.value)}
+              />
+              {search && (
+                <button onClick={()=>setSearch("")} style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:"var(--ws-muted)",fontSize:18,cursor:"pointer",lineHeight:1,padding:0}}>✕</button>
+              )}
+            </div>
+
+            {/* Toolbar */}
+            <div style={{display:"flex",gap:8,marginBottom:10}}>
+              <button onClick={()=>setFilterFilled(v=>!v)} style={{flex:1,background:filterFilled?"#eff6ff":"var(--ws-panel)",border:filterFilled?"1.5px solid #bfdbfe":"1.5px solid #e5e7eb",color:filterFilled?"#1d4ed8":"var(--ws-muted)",borderRadius:8,padding:"10px 12px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Field Sans',Arial,sans-serif"}}>
+                {filterFilled?"● Filled only":"○ All items"}
+              </button>
+              <button onClick={clearAll} style={{flex:1,background:"var(--ws-panel)",border:"1.5px solid #e5e7eb",color:"var(--ws-muted)",borderRadius:8,padding:"10px 12px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Field Sans',Arial,sans-serif"}}>✕ Clear all</button>
+            </div>
+
+            {/* Categories */}
+            {MATERIALS.map(({category,img,items})=>{
+              let visible = items;
+              if (filterFilled) visible = visible.filter(i=>(quantities[norm(i).name]||0)>0);
+              if (search.trim()) {
+                const q = search.trim().toLowerCase();
+                visible = visible.filter(i=>norm(i).name.toLowerCase().includes(q));
+              }
+              if (visible.length===0) return null;
+              return <CategorySection key={category} category={category} img={img} items={visible} quantities={quantities} onQtyChange={setQty}/>;
+            })}
+
+            {/* Custom Items */}
+            <div style={{background:"var(--ws-panel)",borderRadius:14,marginBottom:10,overflow:"hidden",boxShadow:"0 1px 3px rgba(0,0,0,0.07)"}}>
+              <div style={{fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color:"var(--ws-muted)",padding:"12px 16px 10px",borderBottom:"1px solid #f3f4f6",fontFamily:"'Field Sans',Arial,sans-serif"}}>Custom Items</div>
+              <div style={{padding:"12px 16px 8px"}}>
+                {customs.map((item,idx)=>(
+                  <div key={item.id} style={{display:"flex",alignItems:"flex-end",gap:8,marginBottom:12}}>
+                    <div style={{flex:1,minWidth:0}}>
+                      <label style={labelStyle}>Item {idx+1}</label>
+                      <input style={inputStyle} placeholder="Describe the material…" value={item.name} onChange={e=>updateCustom(item.id,"name",e.target.value)}/>
+                    </div>
+                    <Stepper value={item.qty} onChange={v=>updateCustom(item.id,"qty",v)}/>
+                    {customs.length>1 && (
+                      <button onClick={()=>removeCustom(item.id)} style={{background:"none",border:"none",color:"var(--ws-line)",fontSize:18,cursor:"pointer",paddingBottom:8}}>✕</button>
+                    )}
+                  </div>
+                ))}
+                <button onClick={addCustom} style={{width:"100%",background:"none",border:"1.5px dashed #d1d5db",borderRadius:8,color:"var(--ws-muted)",fontSize:13,fontWeight:600,padding:"10px",cursor:"pointer",fontFamily:"'Field Sans',Arial,sans-serif",marginBottom:4}}>
+                  + Add Another Item
+                </button>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div style={{display:"flex",gap:10,marginTop:4,paddingBottom:48}}>
+              <button onClick={()=>setModal("preview")} style={{flex:1,background:"var(--ws-panel)",border:"1.5px solid #e5e7eb",color:"var(--ws-text)",borderRadius:12,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"'Field Sans',Arial,sans-serif"}}>📋 Preview</button>
+              <button onClick={()=>setModal("export")}  style={{flex:2,background:"var(--ws-accent)",border:"none",color:"var(--ws-panel)",borderRadius:12,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"'Field Sans',Arial,sans-serif"}}>⬆ Export</button>
+            </div>
+          </div>
+
+          {modal==="preview" && <PreviewModal {...shared} onClose={()=>setModal(null)} onExport={()=>setModal("export")}/>}
+          {modal==="export"  && <ExportSheet  {...shared} onClose={()=>setModal(null)}/>}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+  </script>
+</body>
+</html>

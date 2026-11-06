@@ -1,0 +1,2895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="../shared/store.js"></script>
+<script src="../shared/jspdf.js"></script>
+<script src="../shared/pdf-delivery.js"></script>
+<script src="../shared/fgt.js" data-tool="survey"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fan Guys – Site Survey</title>
+
+
+<style>
+  :root {
+    /* ── Go Fan Yourself / VividAir Brand Colors ── */
+    --bg: #f2f2f2;
+    --surface: #ffffff;
+    --surface2: #f7f7f7;
+    --border: #e0e0e0;
+    --border2: #cccccc;
+    --primary: #1c1c1c;          /* GFY charcoal black */
+    --primary-light: #e8222a;    /* GFY brand red */
+    --accent: #e8222a;           /* GFY brand red */
+    --accent2: #ff5a60;          /* GFY lighter red */
+    --danger: #b91c1c;
+    --danger-light: #fef2f2;
+    --success: #1a7a4a;
+    --success-light: #e8f5ee;
+    --warn: #d97706;
+    --warn-light: #fffbeb;
+    --text: #1c1c1c;
+    --text2: #4a4a4a;
+    --text3: #888888;
+    --radius: 10px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.08);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.13);
+    --tab-h: 56px;
+  }
+  .dark {
+    --bg: #111111;
+    --surface: #1c1c1c;
+    --surface2: #242424;
+    --border: #333333;
+    --border2: #444444;
+    --primary: #e8222a;
+    --primary-light: #ff5a60;
+    --text: #f5f5f5;
+    --text2: #bbbbbb;
+    --text3: #777777;
+    --danger-light: #2d1010;
+    --success-light: #0f2820;
+    --warn-light: #2a1f00;
+    --shadow: 0 2px 12px rgba(0,0,0,0.5);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.6);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 16px; scroll-behavior: smooth; }
+  body {
+    font-family: 'Barlow', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  /* ── HEADER ── */
+  .app-header {
+    background: linear-gradient(135deg, #0d0d0d 0%, #1c1c1c 60%, #2a2a2a 100%);
+    color: #fff;
+    padding: 0 16px;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 3px 16px rgba(0,0,0,0.4);
+    display: flex; align-items: center; gap: 12px;
+    height: 60px;
+  }
+  .app-header .logo-mark {
+    width: 38px; height: 38px;
+    background: #e8222a;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 800; font-size: 18px; color: #fff;
+    flex-shrink: 0;
+  }
+  .app-header h1 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: clamp(18px, 4vw, 24px);
+    font-weight: 700; letter-spacing: 0.5px;
+    line-height: 1.1;
+  }
+  .app-header h1 span { color: #e8222a; }
+  .header-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  .btn-icon {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #fff; border-radius: 8px;
+    width: 38px; height: 38px;
+    cursor: pointer; font-size: 17px;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s;
+  }
+  .btn-icon:hover { background: rgba(255,255,255,0.2); }
+
+  /* ── LAYOUT ── */
+  .app-body { display: flex; min-height: calc(100vh - 60px); }
+  .sidebar {
+    width: 220px; flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 16px 0;
+    position: sticky; top: 60px;
+    height: calc(100vh - 60px);
+    overflow-y: auto;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 18px;
+    cursor: pointer;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 15px; font-weight: 600; letter-spacing: 0.3px;
+    color: var(--text2);
+    border-left: 3px solid transparent;
+    transition: all 0.18s;
+    user-select: none;
+  }
+  .nav-item:hover { background: var(--surface2); color: var(--primary-light); }
+  .nav-item.active {
+    background: var(--surface2);
+    color: var(--primary-light);
+    border-left-color: var(--accent);
+  }
+  .nav-item .nav-icon { font-size: 18px; width: 22px; text-align: center; }
+  .main { flex: 1; padding: 20px 16px 40px; max-width: 900px; min-width: 0; }
+  @media (min-width: 900px) { .main { padding: 28px 32px 60px; } }
+
+  /* ── MOBILE TABS ── */
+  .mobile-tabs {
+    display: none;
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    height: var(--tab-h); z-index: 90;
+    box-shadow: 0 -4px 16px rgba(0,0,0,0.12);
+  }
+  .mobile-tabs-inner { display: flex; height: 100%; overflow-x: auto; }
+  .mob-tab { min-width: 60px; }
+  .mob-tab {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 2px; cursor: pointer;
+    font-size: 10px; font-weight: 600;
+    color: var(--text3); letter-spacing: 0.3px;
+    transition: color 0.18s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mob-tab .ti { font-size: 20px; }
+  .mob-tab.active { color: var(--primary-light); }
+  .mob-tab.active .ti { color: var(--accent); }
+  @media (max-width: 700px) {
+    .sidebar { display: none; }
+    .mobile-tabs { display: flex; }
+    .main { padding: 16px 12px 76px; }
+  }
+
+  /* ── SECTION PAGES ── */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+    margin-bottom: 16px;
+  }
+  .card-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 17px; font-weight: 700;
+    color: #1c1c1c;
+    letter-spacing: 0.5px; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .dark .card-title { color: #f5f5f5; }
+
+  /* ── FORM ELEMENTS ── */
+  .form-grid { display: grid; gap: 14px; }
+  .form-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+  .form-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  @media (max-width: 560px) {
+    .form-grid.cols-2, .form-grid.cols-3 { grid-template-columns: 1fr; }
+  }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label {
+    font-size: 12px; font-weight: 600;
+    color: var(--text2); letter-spacing: 0.4px;
+    text-transform: uppercase;
+  }
+  .field input, .field select, .field textarea {
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: 7px;
+    padding: 10px 12px;
+    font-family: 'Barlow', sans-serif;
+    font-size: 15px;
+    color: var(--text);
+    transition: border-color 0.18s, box-shadow 0.18s;
+    width: 100%;
+    min-height: 44px;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    outline: none;
+    border-color: var(--primary-light);
+    box-shadow: 0 0 0 3px rgba(37,99,168,0.15);
+  }
+  .field textarea { min-height: 80px; resize: vertical; }
+  .field select { cursor: pointer; }
+
+  /* ── RADIO GROUP ── */
+  .radio-group { display: flex; flex-wrap: wrap; gap: 8px; }
+  .radio-option {
+    display: flex; align-items: center; gap: 7px;
+    padding: 8px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 7px;
+    cursor: pointer; user-select: none;
+    font-size: 14px; font-weight: 500; color: var(--text2);
+    background: var(--surface2);
+    transition: all 0.18s;
+    min-height: 44px;
+  }
+  .radio-option input[type="radio"] { accent-color: var(--primary-light); width: 16px; height: 16px; }
+  .radio-option.selected {
+    border-color: var(--primary-light);
+    background: rgba(37,99,168,0.08);
+    color: var(--primary-light);
+  }
+
+  /* ── TOGGLE ── */
+  .toggle-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .toggle-btn {
+    padding: 8px 16px; border-radius: 7px; border: 1.5px solid var(--border);
+    background: var(--surface2); color: var(--text2);
+    font-family: 'Barlow', sans-serif; font-size: 14px; font-weight: 500;
+    cursor: pointer; transition: all 0.18s; min-height: 44px;
+  }
+  .toggle-btn.on {
+    border-color: var(--success); background: var(--success-light); color: var(--success);
+  }
+  .toggle-btn.off {
+    border-color: var(--danger); background: var(--danger-light); color: var(--danger);
+  }
+
+  /* ── BUTTONS ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 11px 20px; border-radius: 8px;
+    font-family: 'Barlow', sans-serif; font-size: 15px; font-weight: 600;
+    cursor: pointer; transition: all 0.18s; border: none;
+    min-height: 44px; white-space: nowrap;
+  }
+  .btn-primary { background: #e8222a; color: #fff; }
+  .btn-primary:hover { background: #c41920; }
+  .btn-accent { background: #e8222a; color: #fff; }
+  .btn-accent:hover { background: #c41920; }
+  .btn-outline {
+    background: transparent; border: 1.5px solid var(--border2);
+    color: var(--text2);
+  }
+  .btn-outline:hover { border-color: var(--primary-light); color: var(--primary-light); }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-danger:hover { opacity: 0.85; }
+  .btn-sm { padding: 7px 14px; font-size: 13px; min-height: 36px; }
+
+  /* ── FAN CARD ── */
+  .fan-card {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .fan-card.has-warning { border-color: var(--warn); }
+  .fan-card.has-error { border-color: var(--danger); }
+  .fan-card-header {
+    background: linear-gradient(135deg, #1c1c1c, #2e2e2e);
+    color: #fff;
+    padding: 14px 18px;
+    display: flex; align-items: center; gap: 10px;
+    cursor: pointer; user-select: none;
+  }
+  .fan-card-header .fan-num {
+    background: #e8222a;
+    color: #fff;
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 800; font-size: 14px; flex-shrink: 0;
+  }
+  .fan-card-header .fan-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 17px; font-weight: 700; letter-spacing: 0.5px;
+    flex: 1;
+  }
+  .fan-card-body { padding: 20px; display: none; }
+  .fan-card-body.open { display: block; }
+  .fan-section-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--text3);
+    margin: 18px 0 10px; padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ── ALERTS & WARNINGS ── */
+  .alert {
+    border-radius: 8px; padding: 12px 14px;
+    font-size: 14px; display: flex; align-items: flex-start; gap: 9px;
+    margin-top: 8px;
+  }
+  .alert-warn { background: var(--warn-light); border: 1px solid #fcd34d; color: #92400e; }
+  .dark .alert-warn { color: #fcd34d; }
+  .alert-danger { background: var(--danger-light); border: 1px solid #fca5a5; color: var(--danger); }
+  .alert-success { background: var(--success-light); border: 1px solid #6ee7b7; color: var(--success); }
+  .alert-info { background: rgba(37,99,168,0.08); border: 1px solid rgba(37,99,168,0.3); color: var(--primary-light); }
+  .alert .alert-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+  /* ── COLLAPSIBLE ── */
+  .collapsible-header {
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; user-select: none; padding: 14px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    transition: background 0.18s;
+  }
+  .collapsible-header:hover { background: var(--surface2); }
+  .collapsible-header .ch-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 16px; font-weight: 700; letter-spacing: 0.5px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .collapsible-body {
+    border: 1px solid var(--border); border-top: none;
+    border-radius: 0 0 var(--radius) var(--radius);
+    padding: 16px 20px; display: none;
+    background: var(--surface2);
+  }
+  .collapsible-body.open { display: block; }
+  .caret { transition: transform 0.2s; font-size: 12px; }
+  .caret.open { transform: rotate(180deg); }
+
+  /* ── SUMMARY ── */
+  .summary-stat {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+  .summary-stat:last-child { border-bottom: none; }
+  .summary-stat .stat-label { color: var(--text2); }
+  .summary-stat .stat-val {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 17px; font-weight: 700; color: var(--primary-light);
+  }
+  .warn-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: var(--warn-light); border: 1px solid #fcd34d;
+    color: #92400e; border-radius: 6px;
+    padding: 6px 10px; font-size: 13px; font-weight: 500;
+    margin: 4px 0;
+  }
+  .dark .warn-badge { color: #fcd34d; }
+
+  /* ── SECTION PAGE HEADERS ── */
+  .page-header {
+    margin-bottom: 20px;
+    padding-bottom: 14px;
+    border-bottom: 2px solid var(--border);
+  }
+  .page-header h2 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: clamp(22px, 5vw, 28px);
+    font-weight: 800; letter-spacing: 0.5px;
+    color: #1c1c1c;
+  }
+  .dark .page-header h2 { color: #f5f5f5; }
+  .page-header p { color: var(--text2); font-size: 14px; margin-top: 4px; }
+
+  /* ── NFPA CODES ── */
+  .code-item {
+    display: flex; gap: 10px; padding: 10px 0;
+    border-bottom: 1px solid var(--border); font-size: 14px;
+  }
+  .code-item:last-child { border-bottom: none; }
+  .code-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+
+  /* ── PRINT ── */
+  @media print {
+    .sidebar, .mobile-tabs, .app-header, .btn-icon, .no-print { display: none !important; }
+    .page { display: block !important; }
+    .main { padding: 0; }
+    .fan-card-body { display: block !important; }
+    .collapsible-body { display: block !important; }
+    body { background: #fff; color: #000; }
+    .print-header { display: block !important; }
+  }
+  .print-header {
+    display: none;
+    margin-bottom: 24px;
+    border-bottom: 3px solid #e8222a;
+    padding-bottom: 16px;
+  }
+
+  /* ── TOOLTIP ── */
+  .tooltip-wrap { position: relative; display: inline-block; }
+  .tooltip-wrap .tip {
+    position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%);
+    background: #0f2540; color: #fff;
+    padding: 6px 10px; border-radius: 6px; font-size: 12px;
+    white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.18s;
+    z-index: 999; max-width: 220px; white-space: normal; text-align: center;
+  }
+  .tooltip-wrap:hover .tip { opacity: 1; }
+  .tip-icon { cursor: help; color: var(--text3); font-size: 14px; }
+
+  /* ── MISC ── */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+  .flex-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .badge {
+    display: inline-flex; align-items: center;
+    background: var(--primary); color: #fff;
+    border-radius: 20px; padding: 2px 10px;
+    font-size: 12px; font-weight: 700;
+  }
+  .badge-accent { background: var(--accent); color: #0f2540; }
+  .hidden { display: none !important; }
+  .sub-indent { margin-left: 0; padding: 14px; background: var(--surface2); border-radius: 8px; border: 1px solid var(--border); margin-top: 10px; }
+
+  /* Fan card section divider */
+  .fan-divider {
+    height: 1px; background: var(--border);
+    margin: 16px -20px; 
+  }
+
+  /* ── PHOTO CHECKLIST ── */
+  .photo-item {
+    border-bottom: 1px solid var(--border);
+    padding: 10px 0;
+  }
+  .photo-item:last-child { border-bottom: none; }
+  .photo-check-label {
+    display: flex; align-items: center; gap: 12px;
+    cursor: pointer; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .photo-check-label input[type="checkbox"] {
+    width: 22px; height: 22px; flex-shrink: 0;
+    accent-color: var(--success); cursor: pointer;
+  }
+  .photo-check-content { flex: 1; }
+  .photo-check-title {
+    font-size: 15px; font-weight: 600; color: var(--text);
+    transition: color 0.18s;
+  }
+  .photo-check-label:has(input:checked) .photo-check-title {
+    color: var(--success); text-decoration: line-through; opacity: 0.7;
+  }
+  .photo-check-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
+
+  /* ── FAN INLINE PHOTO CHECKLIST ── */
+  .fan-inline-photos {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-top: 4px;
+  }
+  .fan-inline-photos .photo-item { padding: 8px 0; }
+  .fan-inline-photos .photo-check-title { font-size: 14px; }
+
+  /* ── BREAKER CALCULATOR ── */
+  .breaker-result {
+    background: #1c1c1c;
+    border-radius: 10px;
+    padding: 14px 16px;
+    border: 2px solid #e8222a;
+  }
+  .dark .breaker-result { background: #111; }
+  .breaker-result-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 15px; font-weight: 800; letter-spacing: 0.5px;
+    color: #fff; margin-bottom: 10px;
+  }
+  .breaker-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  @media (min-width: 480px) { .breaker-grid { grid-template-columns: repeat(4, 1fr); } }
+  .breaker-stat {
+    background: rgba(255,255,255,0.07);
+    border-radius: 7px; padding: 8px 10px;
+    text-align: center;
+  }
+  .breaker-stat-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.5px;
+    text-transform: uppercase; color: #888; margin-bottom: 3px;
+  }
+  .breaker-stat-val {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 18px; font-weight: 800; color: #fff;
+  }
+  .breaker-stat-val.red { color: #e8222a; }
+  .equip-qty-grid { display: flex; flex-direction: column; gap: 10px; }
+  .equip-qty-row { display: flex; align-items: center; gap: 10px; }
+  .equip-chip {
+    flex: 1;
+    padding: 13px 16px;
+    border-radius: 10px;
+    border: 2px solid var(--border);
+    background: var(--surface2);
+    color: var(--text2);
+    font-family: 'Barlow', sans-serif;
+    font-size: 15px; font-weight: 600;
+    cursor: pointer; text-align: left;
+    transition: all 0.18s;
+    min-height: 50px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .equip-chip:hover { border-color: var(--primary-light); color: var(--primary-light); }
+  .equip-chip.active {
+    border-color: #e8222a;
+    background: rgba(232,34,42,0.08);
+    color: #e8222a;
+  }
+  .dark .equip-chip.active { color: #ff5a60; }
+  .equip-qty-control {
+    display: none;
+    align-items: center; gap: 0;
+    border: 2px solid #e8222a;
+    border-radius: 10px; overflow: hidden;
+    flex-shrink: 0;
+  }
+  .equip-qty-control.visible { display: flex; }
+  .qty-btn {
+    background: var(--surface2); border: none;
+    color: var(--text); font-size: 20px; font-weight: 700;
+    width: 44px; height: 50px;
+    cursor: pointer; transition: background 0.15s;
+    display: flex; align-items: center; justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .qty-btn:hover { background: rgba(232,34,42,0.12); }
+  .qty-val {
+    min-width: 38px; text-align: center;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 20px; font-weight: 800;
+    color: var(--primary-light);
+    background: var(--surface);
+    height: 50px; display: flex; align-items: center; justify-content: center;
+  }
+  .lift-reco {
+    border-radius: 10px; padding: 16px;
+    display: flex; gap: 14px; align-items: flex-start;
+  }
+  .lift-reco-icon { font-size: 32px; flex-shrink: 0; }
+  .lift-reco-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 20px; font-weight: 800; letter-spacing: 0.5px;
+  }
+  .lift-reco-sub { font-size: 13px; margin-top: 4px; opacity: 0.85; }
+  .lift-primary { background: var(--success-light); border: 2px solid var(--success); color: var(--success); }
+  .lift-warn { background: var(--warn-light); border: 2px solid var(--warn); color: var(--warn); }
+  .lift-danger { background: var(--danger-light); border: 2px solid var(--danger); color: var(--danger); }
+
+  /* ── HARDWARE RULE BADGE ── */
+  .hw-rule {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 12px; border-radius: 8px; margin-bottom: 8px;
+    border: 1.5px solid; font-size: 14px;
+  }
+  .hw-rule-icon { font-size: 20px; flex-shrink: 0; }
+  .hw-rule-title { font-weight: 700; font-size: 15px; }
+  .hw-warn { background: var(--warn-light); border-color: #fcd34d; color: #92400e; }
+  .dark .hw-warn { color: #fcd34d; }
+  .hw-info { background: rgba(37,99,168,0.08); border-color: rgba(37,99,168,0.3); color: var(--primary-light); }
+</style>
+<link rel="stylesheet" href="../shared/workspace.css">
+<script src="../shared/workspace.js" defer></script>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="logo-mark">FG</div>
+  <h1>Fan Guys &nbsp;<span>Site Survey</span></h1>
+  <div class="header-right">
+    <button class="btn-icon no-print" onclick="startNewSurvey()" title="Start a new survey">＋</button>
+    <button class="btn-icon" onclick="toggleDark()" title="Toggle dark mode">🌙</button>
+    <button class="btn-icon no-print" onclick="printProposal()" title="Print / Export">🖨</button>
+  </div>
+</header>
+
+<div class="app-body">
+  <!-- Sidebar Nav (desktop) -->
+  <nav class="sidebar">
+    <div class="nav-item active" onclick="showPage('job')" data-page="job">
+      <span class="nav-icon">🏢</span> Job & Site Info
+    </div>
+    <div class="nav-item" onclick="showPage('fans')" data-page="fans">
+      <span class="nav-icon">🌀</span> Fan Layout & Specs
+    </div>
+    <div class="nav-item" onclick="showPage('aerial')" data-page="aerial">
+      <span class="nav-icon">🏗️</span> Aerial Equipment
+    </div>
+    <div class="nav-item" onclick="showPage('photos')" data-page="photos">
+      <span class="nav-icon">📷</span> Photo Checklist
+    </div>
+    <div class="nav-item" onclick="showPage('code')" data-page="code">
+      <span class="nav-icon">📋</span> Code & Clearance
+    </div>
+    <div class="nav-item" onclick="showPage('summary')" data-page="summary">
+      <span class="nav-icon">📊</span> Live Summary
+    </div>
+  </nav>
+
+  <main class="main">
+
+    <!-- ═══════════════════════════════════════════ PAGE 1: JOB INFO -->
+    <div class="page active" id="page-job">
+      <div class="page-header">
+        <h2>🏢 Job &amp; Site Information</h2>
+        <p>Enter project details, address, and site access requirements.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">📁 Project Details</div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Project / Job Name *</label>
+            <input type="text" id="jobName" placeholder="e.g., ABC Warehouse – Phase 2" oninput="updateSummary()">
+          </div>
+          <div class="field">
+            <label>Salesman / Rep Name</label>
+            <input type="text" id="salesName" placeholder="Your name">
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">📍 Installation Address</div>
+        <div class="form-grid">
+          <div class="field" style="grid-column: 1 / -1">
+            <label>Street Address</label>
+            <input type="text" id="addrStreet" placeholder="1234 Industrial Blvd, Suite 100" oninput="updateSummary()">
+          </div>
+          <div class="field">
+            <label>City</label>
+            <input type="text" id="addrCity" placeholder="City" oninput="updateSummary()">
+          </div>
+          <div class="field">
+            <label>State</label>
+            <input type="text" id="addrState" placeholder="TX" maxlength="2">
+          </div>
+          <div class="field">
+            <label>ZIP</label>
+            <input type="text" id="addrZip" placeholder="77000" maxlength="10">
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">🕐 Site Access & Hours</div>
+        <div class="form-grid cols-2">
+          <div class="field">
+            <label>Building Operating Hours</label>
+            <input type="text" id="opHours" placeholder="e.g., Mon–Fri 7AM–5PM" oninput="updateSummary()">
+          </div>
+          <div class="field">
+            <label>After-Hours / Special Access?</label>
+            <div class="toggle-row" style="margin-top: 4px;">
+              <button class="toggle-btn" id="afterBtn" onclick="toggleAfterHours()">Not checked</button>
+              <span id="afterLabel" style="font-size:13px;color:var(--text3)"></span>
+            </div>
+          </div>
+        </div>
+        <div id="afterHoursNote" class="hidden">
+          <div class="alert alert-warn" style="margin-top:12px">
+            <span class="alert-icon">⚠️</span>
+            <div><strong>After-Hours Access Required</strong> – Additional labor charges may apply. Confirm with customer and include in quote.</div>
+          </div>
+          <div class="field" style="margin-top:10px">
+            <label>Access Details / Contact</label>
+            <input type="text" id="afterDetails" placeholder="e.g., Call John at 555-0100 for after-hours badge access">
+          </div>
+        </div>
+        <div class="field" style="margin-top:14px">
+          <label>Additional Site Notes</label>
+          <textarea id="siteNotes" placeholder="Dock doors, forklift availability, parking, staging area, etc."></textarea>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="showPage('fans')" style="margin-top:8px">
+        Next: Fan Layout & Specs →
+      </button>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ PAGE 2: FANS -->
+    <div class="page" id="page-fans">
+      <div class="page-header">
+        <h2>🌀 Fan Layout &amp; Specs</h2>
+        <p>Add one card per fan. All fields are editable and removable.</p>
+      </div>
+      <div class="flex-row" style="margin-bottom:16px">
+        <button class="btn btn-accent" onclick="addFan()">+ Add Fan</button>
+        <span id="fanCount" class="badge badge-accent">0 Fans</span>
+      </div>
+      <div id="fanList"></div>
+      <div id="noFansMsg" class="alert alert-info">
+        <span class="alert-icon">💡</span>
+        <span>Click <strong>+ Add Fan</strong> above to begin adding fan locations.</span>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ PAGE 3: AERIAL EQUIPMENT -->
+    <div class="page" id="page-aerial">
+      <div class="page-header">
+        <h2>🏗️ Aerial Equipment</h2>
+        <p>Site access, lift selection based on ceiling height, and additional equipment needed.</p>
+      </div>
+
+      <!-- Site Access -->
+      <div class="card">
+        <div class="card-title">🚪 Site Access for Equipment</div>
+        <div class="alert alert-warn" style="margin-bottom:14px">
+          <span class="alert-icon">⚠️</span>
+          <div><strong>Critical:</strong> Confirm how lifts will enter the building before scheduling installation. Wrong access type = delayed job.</div>
+        </div>
+        <div class="field">
+          <label>Building Access Type for Lifts *</label>
+          <div class="radio-group" id="accessTypeGroup">
+            <label class="radio-option" id="access-opt-grade"><input type="radio" name="accessType" value="grade" onchange="onAccessChange()"> Grade-Level Door (Drive-in)</label>
+            <label class="radio-option" id="access-opt-ramp"><input type="radio" name="accessType" value="ramp" onchange="onAccessChange()"> Ramp Door</label>
+            <label class="radio-option" id="access-opt-dock"><input type="radio" name="accessType" value="dock" onchange="onAccessChange()"> Loading Dock Only (No Ramp / Grade)</label>
+            <label class="radio-option" id="access-opt-none"><input type="radio" name="accessType" value="none" onchange="onAccessChange()"> No Direct Access – Equipment Placed from Trailer</label>
+          </div>
+        </div>
+        <div id="accessGradeNote" class="alert alert-success hidden" style="margin-top:10px">
+          <span class="alert-icon">✅</span>
+          <div><strong>Grade-Level Access:</strong> Full-size scissor and boom lifts can be driven in directly. Standard equipment delivery applies.</div>
+        </div>
+        <div id="accessRampNote" class="alert alert-info hidden" style="margin-top:10px">
+          <span class="alert-icon">📐</span>
+          <div><strong>Ramp Door:</strong> Confirm ramp grade, door width and height clearance. Scissor lifts generally OK; boom lifts may have weight/clearance issues – verify with crew.</div>
+        </div>
+        <div id="accessDockNote" class="alert alert-warn hidden" style="margin-top:10px">
+          <span class="alert-icon">⚠️</span>
+          <div><strong>Loading Dock Only:</strong> Standard floor-drive lifts cannot enter. Equipment must be lowered from trailer into dock, or dock plate/leveler required. Verify with install team.</div>
+        </div>
+        <div id="accessNoneNote" class="alert alert-danger hidden" style="margin-top:10px">
+          <span class="alert-icon">🚫</span>
+          <div><strong>No Direct Access:</strong> Equipment will need to be placed inside directly from trailer. Coordinate with install team for crane, dock plate, or staging plan. Additional cost likely.</div>
+        </div>
+
+        <div class="form-grid cols-2" style="margin-top:14px">
+          <div class="field">
+            <label>Door Width at Access Point (ft)</label>
+            <input type="number" id="doorWidth" min="0" placeholder="e.g., 14" oninput="updateAerialSummary()">
+          </div>
+          <div class="field">
+            <label>Door Height at Access Point (ft)</label>
+            <input type="number" id="doorHeight" min="0" placeholder="e.g., 16" oninput="updateAerialSummary()">
+          </div>
+        </div>
+        <div class="field" style="margin-top:10px">
+          <label>Access Notes / Restrictions</label>
+          <textarea id="accessNotes" placeholder="Low overhead at dock, tight corner turn, max weight restrictions on floor, security clearance needed…"></textarea>
+        </div>
+      </div>
+
+      <!-- Lift Recommendation -->
+      <div class="card">
+        <div class="card-title">🏗️ Lift Type Recommendation</div>
+        <div class="alert alert-info" style="margin-bottom:14px">
+          <span class="alert-icon">💡</span>
+          <div>Based on maximum ceiling height across all fans entered. <strong>Add fans first</strong> for an automatic recommendation, or enter a height below.</div>
+        </div>
+        <div class="form-grid cols-2">
+          <div class="field">
+            <label>Override / Manual Max Ceiling Height (ft)
+              <span class="tooltip-wrap"><span class="tip-icon">ℹ️</span><span class="tip">Leave blank to auto-calculate from fan ceiling heights.</span></span>
+            </label>
+            <input type="number" id="manualMaxCH" min="0" max="120" placeholder="Auto from fan data" oninput="updateAerialSummary()">
+          </div>
+          <div class="field">
+            <label>Calculated Max Ceiling Height</label>
+            <div id="calcMaxCH" style="padding:10px 12px;background:var(--surface2);border:1.5px solid var(--border);border-radius:7px;font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;color:var(--primary-light);min-height:44px;display:flex;align-items:center">—</div>
+          </div>
+        </div>
+        <div id="liftRecommendation" style="margin-top:14px"></div>
+
+        <div class="fan-section-label" style="margin-top:18px">🔧 Additional Equipment Needed</div>
+        <div class="field">
+          <label>Select equipment and quantities required for this job</label>
+          <div class="equip-qty-grid" style="margin-top:10px">
+
+            <div class="equip-qty-row">
+              <button class="equip-chip" id="eq-scissor" onclick="toggleEquip('eq-scissor')">Scissor Lift</button>
+              <div class="equip-qty-control" id="eq-scissor-qty-wrap">
+                <button class="qty-btn" onclick="changeQty('scissor',-1)">−</button>
+                <span class="qty-val" id="qty-scissor">1</span>
+                <button class="qty-btn" onclick="changeQty('scissor',1)">+</button>
+              </div>
+            </div>
+
+            <div class="equip-qty-row">
+              <button class="equip-chip" id="eq-boom" onclick="toggleEquip('eq-boom')">Boom Lift</button>
+              <div class="equip-qty-control" id="eq-boom-qty-wrap">
+                <button class="qty-btn" onclick="changeQty('boom',-1)">−</button>
+                <span class="qty-val" id="qty-boom">1</span>
+                <button class="qty-btn" onclick="changeQty('boom',1)">+</button>
+              </div>
+            </div>
+
+            <div class="equip-qty-row">
+              <button class="equip-chip" id="eq-forklift" onclick="toggleEquip('eq-forklift')">Forklift</button>
+              <div class="equip-qty-control" id="eq-forklift-qty-wrap">
+                <button class="qty-btn" onclick="changeQty('forklift',-1)">−</button>
+                <span class="qty-val" id="qty-forklift">1</span>
+                <button class="qty-btn" onclick="changeQty('forklift',1)">+</button>
+              </div>
+            </div>
+
+            <div class="equip-qty-row">
+              <button class="equip-chip" id="eq-1man" onclick="toggleEquip('eq-1man')">Personnel Lift</button>
+              <div class="equip-qty-control" id="eq-1man-qty-wrap">
+                <button class="qty-btn" onclick="changeQty('1man',-1)">−</button>
+                <span class="qty-val" id="qty-1man">1</span>
+                <button class="qty-btn" onclick="changeQty('1man',1)">+</button>
+              </div>
+            </div>
+
+            <div class="equip-qty-row">
+              <button class="equip-chip" id="eq-telehandler" onclick="toggleEquip('eq-telehandler')">Telehandler</button>
+              <div class="equip-qty-control" id="eq-telehandler-qty-wrap">
+                <button class="qty-btn" onclick="changeQty('telehandler',-1)">−</button>
+                <span class="qty-val" id="qty-telehandler">1</span>
+                <button class="qty-btn" onclick="changeQty('telehandler',1)">+</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+        <div class="field" style="margin-top:12px">
+          <label>Equipment Notes</label>
+          <textarea id="equipNotes" placeholder="Customer providing any equipment? Rental needed? Special requirements, weight restrictions on floor, confined aisle width for lifts…"></textarea>
+        </div>
+      </div>
+
+      <!-- Hardware Rules Auto-Summary -->
+      <div class="card" id="hardwareRulesCard">
+        <div class="card-title">🔩 Automatic Hardware Alerts</div>
+        <div id="hardwareRulesContent">
+          <div style="color:var(--text3);font-size:14px">Add fans to see automatic hardware requirement alerts.</div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" onclick="showPage('photos')" style="margin-top:8px">
+        Next: Photo Checklist →
+      </button>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ PAGE 4: PHOTO CHECKLIST -->
+    <div class="page" id="page-photos">
+      <div class="page-header">
+        <h2>📷 Photo Checklist</h2>
+        <p>Check off photos as you take them on-site. Don't leave without capturing everything.</p>
+      </div>
+
+      <div class="alert alert-warn" style="margin-bottom:16px">
+        <span class="alert-icon">📸</span>
+        <div><strong>Reminder:</strong> Photos are required for accurate quoting and to prevent installation surprises. Take them now while you're on-site.</div>
+      </div>
+
+      <!-- Access Photos -->
+      <div class="card">
+        <div class="card-title" style="cursor:pointer" onclick="toggleCollapsible('photo-access')">
+          🚪 Site Access &amp; Entry Points
+          <span style="float:right;font-size:12px" id="photo-access-caret">▼</span>
+        </div>
+        <div id="photo-access" class="collapsible-body open" style="border:none;padding:0;background:transparent">
+          <div class="photo-item" id="pi-ramp">
+            <label class="photo-check-label">
+              <input type="checkbox" class="photo-cb" onchange="updatePhotoProgress()">
+              <div class="photo-check-content">
+                <div class="photo-check-title">Ramp Door / Grade Level Door</div>
+                <div class="photo-check-sub">Full view showing width, height, condition, and approach for scissor/boom lifts</div>
+              </div>
+            </label>
+          </div>
+          <div class="photo-item" id="pi-dock">
+            <label class="photo-check-label">
+              <input type="checkbox" class="photo-cb" onchange="updatePhotoProgress()">
+              <div class="photo-check-content">
+                <div class="photo-check-title">Loading Dock / Dock Door</div>
+                <div class="photo-check-sub">Dock height, door width, leveler/plate availability, dock surroundings</div>
+              </div>
+            </label>
+          </div>
+          <div class="photo-item">
+            <label class="photo-check-label">
+              <input type="checkbox" class="photo-cb" onchange="updatePhotoProgress()">
+              <div class="photo-check-content">
+                <div class="photo-check-title">Aisle / Drive Path to Work Area</div>
+                <div class="photo-check-sub">Shows clearance for lift travel from entry point to fan locations</div>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Electrical Panel Photos – Turnkey only -->
+      <div id="photo-elec-card" class="card hidden">
+        <div class="card-title" style="cursor:pointer" onclick="toggleCollapsible('photo-elec')">
+          ⚡ Electrical Panels <span style="font-size:12px;font-weight:500;opacity:0.7">(Turnkey jobs only)</span>
+          <span style="float:right;font-size:12px" id="photo-elec-caret">▼</span>
+        </div>
+        <div id="photo-elec" class="collapsible-body open" style="border:none;padding:0;background:transparent">
+          <div class="alert alert-info" style="margin-bottom:12px">
+            <span class="alert-icon">💡</span>
+            <div>Required for <strong>every electrical panel</strong> being used. Repeat for each panel if multiple.</div>
+          </div>
+          <div class="photo-item">
+            <label class="photo-check-label">
+              <input type="checkbox" class="photo-cb" onchange="updatePhotoProgress()">
+              <div class="photo-check-content">
+                <div class="photo-check-title">Panel Location / Environment</div>
+                <div class="photo-check-sub">Wide shot showing where the panel is in the room, what's around it, access path</div>
+              </div>
+            </label>
+          </div>
+          <div class="photo-item">
+            <label class="photo-check-label">
+              <input type="checkbox" class="photo-cb" onchange="updatePhotoProgress()">
+              <div class="photo-check-content">
+                <div class="photo-check-title">Panel – Full Front View, Door Closed</div>
+                <div class="photo-check-sub">Straight-on shot of panel cover showing make, model, label</div>
+              </div>
+            </label>
+          </div>
+          <div class="photo-item">
+            <label class="photo-check-label">
+              <input type="checkbox" class="photo-cb" onchange="updatePhotoProgress()">
+              <div class="photo-check-content">
+                <div class="photo-check-title">Panel – Door Open, Full Interior View</div>
+                <div class="photo-check-sub">All breakers visible, full interior, nothing cropped out</div>
+              </div>
+            </label>
+          </div>
+          <div class="photo-item">
+            <label class="photo-check-label">
+              <input type="checkbox" class="photo-cb" onchange="updatePhotoProgress()">
+              <div class="photo-check-content">
+                <div class="photo-check-title">Panel Specs / Nameplate</div>
+                <div class="photo-check-sub">Main amperage, voltage, manufacturer, series – close-up, legible</div>
+              </div>
+            </label>
+          </div>
+          <div class="photo-item">
+            <label class="photo-check-label">
+              <input type="checkbox" class="photo-cb" onchange="updatePhotoProgress()">
+              <div class="photo-check-content">
+                <div class="photo-check-title">Panel Schedule / Breaker Directory</div>
+                <div class="photo-check-sub">The circuit directory/label sheet (inside door or on panel face)</div>
+              </div>
+            </label>
+          </div>
+          <div class="photo-item">
+            <label class="photo-check-label">
+              <input type="checkbox" class="photo-cb" onchange="updatePhotoProgress()">
+              <div class="photo-check-content">
+                <div class="photo-check-title">Open Breaker Slots</div>
+                <div class="photo-check-sub">Close-up showing available open slots for adding new breakers</div>
+              </div>
+            </label>
+          </div>
+          <div class="photo-item">
+            <label class="photo-check-label" style="align-items:flex-start;gap:12px">
+              <input type="checkbox" class="photo-cb" onchange="updatePhotoProgress()">
+              <div class="photo-check-content" style="flex:1">
+                <div class="photo-check-title">Room for Adding Breakers?</div>
+                <div class="photo-check-sub">Confirm physically — check this box if yes</div>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
+                <button class="toggle-btn btn-sm" id="panelRoomBtn" onclick="togglePanelRoom()">Not Checked</button>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fan Location Photos – Dynamic -->
+      <div class="card">
+        <div class="card-title" style="cursor:pointer" onclick="toggleCollapsible('photo-fans')">
+          🌀 Fan Locations
+          <span style="float:right;font-size:12px" id="photo-fans-caret">▼</span>
+        </div>
+        <div id="photo-fans" class="collapsible-body open" style="border:none;padding:0;background:transparent">
+          <div class="alert alert-info" style="margin-bottom:12px">
+            <span class="alert-icon">💡</span>
+            <div>Required for <strong>each fan location</strong>. Add fans in the Fan Layout tab to see per-fan photo checklist items below.</div>
+          </div>
+          <div id="fanPhotoList">
+            <div style="color:var(--text3);font-size:14px;padding:8px 0">No fans added yet.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Obstructions -->
+      <div class="card">
+        <div class="card-title" style="cursor:pointer" onclick="toggleCollapsible('photo-obs')">
+          🚧 Obstructions &amp; Obstacles
+          <span style="float:right;font-size:12px" id="photo-obs-caret">▼</span>
+        </div>
+        <div id="photo-obs" class="collapsible-body open" style="border:none;padding:0;background:transparent">
+          <div class="photo-item">
+            <label class="photo-check-label">
+              <input type="checkbox" class="photo-cb" onchange="updatePhotoProgress()">
+              <div class="photo-check-content">
+                <div class="photo-check-title">Any Obstructions or Obstacles</div>
+                <div class="photo-check-sub">HVAC ducts, sprinkler heads, lighting, beams, columns, overhead doors, skylights, low-hanging equipment</div>
+              </div>
+            </label>
+          </div>
+          <div class="photo-item">
+            <label class="photo-check-label">
+              <input type="checkbox" class="photo-cb" onchange="updatePhotoProgress()">
+              <div class="photo-check-content">
+                <div class="photo-check-title">Sprinkler System Layout (if applicable)</div>
+                <div class="photo-check-sub">Pattern of sprinkler heads near each fan location – needed to confirm centering and 36" clearance</div>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- FAP Photo -->
+      <div class="card" id="fapPhotoCard">
+        <div class="card-title" style="cursor:pointer" onclick="toggleCollapsible('photo-fap')">
+          🚒 Fire Alarm Panel (FAP)
+          <span style="float:right;font-size:12px" id="photo-fap-caret">▼</span>
+        </div>
+        <div id="photo-fap" class="collapsible-body open" style="border:none;padding:0;background:transparent">
+          <div class="alert alert-warn" style="margin-bottom:12px">
+            <span class="alert-icon">⚠️</span>
+            <div>Only required if installers are running fire alarm wire. Confirms FAP location and termination point.</div>
+          </div>
+          <div class="photo-item">
+            <label class="photo-check-label">
+              <input type="checkbox" class="photo-cb" onchange="updatePhotoProgress()">
+              <div class="photo-check-content">
+                <div class="photo-check-title">Fire Alarm Panel – Location Shot</div>
+                <div class="photo-check-sub">Wide view showing FAP location in the room, surrounding area, path from VFD</div>
+              </div>
+            </label>
+          </div>
+          <div class="photo-item">
+            <label class="photo-check-label">
+              <input type="checkbox" class="photo-cb" onchange="updatePhotoProgress()">
+              <div class="photo-check-content">
+                <div class="photo-check-title">Fire Alarm Panel – Front View (Door Closed)</div>
+                <div class="photo-check-sub">Full face of FAP showing make and model</div>
+              </div>
+            </label>
+          </div>
+          <div class="photo-item">
+            <label class="photo-check-label">
+              <input type="checkbox" class="photo-cb" onchange="updatePhotoProgress()">
+              <div class="photo-check-content">
+                <div class="photo-check-title">Fire Alarm Panel – Interior / Landing Points</div>
+                <div class="photo-check-sub">Inside showing available termination points for VFD interlock wiring</div>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Progress Bar -->
+      <div class="card">
+        <div class="card-title">📊 Photo Checklist Progress</div>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div style="flex:1;min-width:160px">
+            <div style="height:12px;background:var(--border);border-radius:8px;overflow:hidden">
+              <div id="photoProgressBar" style="height:100%;background:linear-gradient(90deg,var(--success),#34d399);border-radius:8px;width:0%;transition:width 0.3s"></div>
+            </div>
+          </div>
+          <div id="photoProgressLabel" style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--primary-light);white-space:nowrap">0 / 0 checked</div>
+        </div>
+        <div id="photoProgressMsg" style="font-size:13px;color:var(--text3);margin-top:6px">Check off photos as you take them on-site.</div>
+      </div>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════════ PAGE 5: CODE -->
+    <div class="page" id="page-code">
+      <div class="page-header">
+        <h2>📋 Code &amp; Clearance Reference</h2>
+        <p>NFPA 13 / NFSA guidance for HVLS fan installations.</p>
+      </div>
+
+      <div class="alert alert-warn" style="margin-bottom:16px">
+        <span class="alert-icon">⚠️</span>
+        <div><strong>Important:</strong> Always verify final layout with local AHJ and fire protection engineer. These are general guidelines.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🔴 NFPA 13 – Critical Requirements</div>
+        <div class="code-item">
+          <div class="code-icon">📏</div>
+          <div><strong>Maximum Fan Diameter:</strong> 24 ft (NFPA 13 limit for HVLS fans under standard sprinkler design)</div>
+        </div>
+        <div class="code-item">
+          <div class="code-icon">🎯</div>
+          <div><strong>Sprinkler Centering:</strong> Fans shall be centered approximately between four adjacent sprinklers whenever possible</div>
+        </div>
+        <div class="code-item">
+          <div class="code-icon">↕️</div>
+          <div><strong>Vertical Clearance:</strong> Check the applicable sprinkler requirements and manufacturer instructions. A common referenced baseline is <strong>36 inches (3 ft)</strong>; this is not a site-specific approval.</div>
+        </div>
+        <div class="code-item">
+          <div class="code-icon">🚒</div>
+          <div><strong>Fire Alarm Interlock:</strong> All HVLS fans <strong>must</strong> be interlocked to shut down immediately upon sprinkler waterflow alarm activation</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📐 General Sizing Rules of Thumb</div>
+        <div class="code-item">
+          <div class="code-icon">📊</div>
+          <div><strong>Fan Diameter vs. Ceiling Height:</strong> Planning heuristic only: fan diameter near blade height needs review. This is not a universal manufacturer or code limit. Example: 20 ft ceiling with 1 ft downtube = 19 ft max recommended diameter.</div>
+        </div>
+        <div class="code-item">
+          <div class="code-icon">⬆️</div>
+          <div><strong>Minimum Floor-to-Blade:</strong> Absolute minimum 10 ft clearance from floor to lowest blade tip</div>
+        </div>
+        <div class="code-item">
+          <div class="code-icon">↔️</div>
+          <div><strong>Lateral Clearances:</strong> Maintain adequate clearance from walls, columns, HVAC ducts, light fixtures, overhead doors, and other obstructions. Consult manufacturer specs for each model.</div>
+        </div>
+        <div class="code-item">
+          <div class="code-icon">🔽</div>
+          <div><strong>Downtubes:</strong> Longer downtubes lower blades closer to floor – always verify 36" sprinkler clearance AND 10 ft floor clearance remain met.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">⚡ Electrical & Controls Notes</div>
+        <div class="code-item">
+          <div class="code-icon">🔌</div>
+          <div><strong>Vivid Air Navigator (BACnet):</strong> Requires a dedicated 120V outlet at the controller location. If not present, conduit run must be quoted.</div>
+        </div>
+        <div class="code-item">
+          <div class="code-icon">🔧</div>
+          <div><strong>Scope Types:</strong> <em>Turnkey</em> includes full power from panel. <em>Mechanical Only</em> = hang fan only. <em>Mechanical + Connections</em> = hang and wire motor, customer provides power to panel.</div>
+        </div>
+        <div class="code-item">
+          <div class="code-icon">📡</div>
+          <div><strong>Fire Alarm Wire:</strong> Fan Guys installers will run and terminate wire at VFD only. Customer is responsible for connection at Fire Alarm Panel (FAP).</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ PAGE 4: SUMMARY -->
+    <div class="page" id="page-summary">
+      <div class="print-header" id="printHeader">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:8px">
+          <div style="width:48px;height:48px;background:#e8222a;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:22px;color:#fff">FG</div>
+          <div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:#1c1c1c">FAN GUYS – SITE SURVEY PROPOSAL</div>
+            <div style="font-size:13px;color:#666">This is a site survey and layout proposal only — final quote subject to field verification.</div>
+          </div>
+        </div>
+        <div style="font-size:13px;color:#444;margin-top:8px" id="printMeta"></div>
+      </div>
+
+      <div class="page-header">
+        <h2>📊 Live Survey Summary</h2>
+        <p>Real-time overview — updates as you fill out fan details.</p>
+      </div>
+
+      <div class="flex-row no-print" style="margin-bottom:20px;gap:10px">
+        <button class="btn btn-primary" onclick="printProposal()">🖨 Save / Share Survey PDF</button>
+        <button class="btn btn-outline" onclick="exportJSON()">⬇ Export JSON</button>
+      </div>
+
+      <!-- Aggregated Stats -->
+      <div class="card" id="summaryCard">
+        <div class="card-title">📈 Aggregated Totals</div>
+        <div id="summaryStats">
+          <div class="alert alert-info">
+            <span class="alert-icon">💡</span>
+            <span>Add fans in the Fan Layout tab to see aggregated totals here.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Warnings -->
+      <div class="card" id="warningsCard">
+        <div class="card-title">⚠️ Automatic Warnings</div>
+        <div id="warningsList">
+          <div style="color:var(--text3);font-size:14px">No warnings yet.</div>
+        </div>
+      </div>
+
+      <!-- Per-fan breakdown -->
+      <div id="fanBreakdowns"></div>
+
+      <!-- Aerial Equipment Summary -->
+      <div class="card">
+        <div class="card-title">🏗️ Aerial Equipment Summary</div>
+        <div id="aerialSummaryContent">
+          <div style="color:var(--text3);font-size:14px">Fill out the Aerial Equipment tab to see summary here.</div>
+        </div>
+      </div>
+
+      <!-- Breaker Summary -->
+      <div class="card">
+        <div class="card-title">⚡ Electrical / Breaker Summary</div>
+        <div class="alert alert-info" style="margin-bottom:12px">
+          <span class="alert-icon">💡</span>
+          <div>Reference motor-load inventory only. VFD input ratings, conductor conditions, and manufacturer-specified protection must be checked separately.</div>
+        </div>
+        <div id="aggregateBreakerCard">
+          <div style="color:var(--text3);font-size:14px">Set fans to Turnkey with voltage selected to see breaker summary.</div>
+        </div>
+      </div>
+
+      <!-- Job info summary -->
+      <div class="card" id="jobSummaryCard">
+        <div class="card-title">🏢 Job Details</div>
+        <div id="jobSummaryContent" style="font-size:14px;color:var(--text2)">No job info entered yet.</div>
+      </div>
+
+      <div class="card no-print" style="border:1px dashed var(--border2)">
+        <div style="font-size:13px;color:var(--text3);text-align:center">
+          <em>"This is a site survey and layout proposal only — final quote subject to field verification."</em><br>
+          Fan Guys · <span id="currentDate"></span>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Mobile Bottom Tabs -->
+<div class="mobile-tabs">
+  <div class="mobile-tabs-inner">
+    <div class="mob-tab active" onclick="showPage('job')" data-page="job">
+      <span class="ti">🏢</span><span>Job Info</span>
+    </div>
+    <div class="mob-tab" onclick="showPage('fans')" data-page="fans">
+      <span class="ti">🌀</span><span>Fans</span>
+    </div>
+    <div class="mob-tab" onclick="showPage('aerial')" data-page="aerial">
+      <span class="ti">🏗️</span><span>Aerial</span>
+    </div>
+    <div class="mob-tab" onclick="showPage('photos')" data-page="photos">
+      <span class="ti">📷</span><span>Photos</span>
+    </div>
+    <div class="mob-tab" onclick="showPage('code')" data-page="code">
+      <span class="ti">📋</span><span>Codes</span>
+    </div>
+    <div class="mob-tab" onclick="showPage('summary')" data-page="summary">
+      <span class="ti">📊</span><span>Summary</span>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════
+let fans = [];
+let fanCounter = 0;
+let darkMode = false;
+let afterHours = false;
+let afterHoursChecked = false;
+
+// VividAir / Go Fan Yourself product catalog
+// Each entry: { label, sizes: [{dia, label}], notes }
+const GFY_PRODUCTS = [
+  {
+    id: "z-tech",
+    label: "Z-Tech™ – Overhead Heavy-Duty (5-blade)",
+    desc: "Warehouses & large facilities. Highest air turnover per minute. Up to 32,400 sq ft coverage.",
+    sizes: [
+      { dia: 24, label: '24 ft' },
+      { dia: 22, label: '22 ft' },
+      { dia: 20, label: '20 ft' },
+      { dia: 18, label: '18 ft' },
+      { dia: 16, label: '16 ft' },
+      { dia: 14, label: '14 ft' },
+      { dia: 12, label: '12 ft' },
+      { dia: 10, label: '10 ft' },
+      { dia: 8,  label: '8 ft'  },
+    ]
+  },
+  {
+    id: "z-chill",
+    label: "Z-Chill™ – Overhead + HVAC Heavy-Duty (5-blade)",
+    desc: "Only fan with a diffuser system. Connects to HVAC. 40–80% additional savings over traditional HVAC.",
+    sizes: [
+      { dia: 24, label: '24 ft' },
+      { dia: 22, label: '22 ft' },
+      { dia: 20, label: '20 ft' },
+      { dia: 18, label: '18 ft' },
+      { dia: 16, label: '16 ft' },
+    ]
+  },
+  {
+    id: "z-tech3",
+    label: "Z-Tech3™ – Overhead Mid-Duty (3-blade)",
+    desc: "Quieter & quicker install than 5-blade. Up to 40,000 sq ft destratification coverage.",
+    sizes: [
+      { dia: 24, label: '24 ft' },
+      { dia: 20, label: '20 ft' },
+      { dia: 16, label: '16 ft' },
+      { dia: 12, label: '12 ft' },
+      { dia: 10, label: '10 ft' },
+      { dia: 8,  label: '8 ft'  },
+    ]
+  },
+  {
+    id: "conzumer",
+    label: "ConZumer™ – Overhead Light-Duty (3-blade)",
+    desc: "Best for 1–2 fans. No motor wiring – plugs into any 20-amp outlet. 6,400 sq ft coverage.",
+    sizes: [
+      { dia: 12, label: '12 ft' },
+    ]
+  },
+  {
+    id: "taz",
+    label: "Taz™ – In-Aisle Fan (4-blade)",
+    desc: "Best for obstructed ceilings. 135 ft linear cooling. Uses half the power of aisle/basket fans.",
+    sizes: [
+      { dia: 6,  label: '72 in (6 ft)' },
+      { dia: 3,  label: '36 in (3 ft)' },
+    ]
+  },
+  {
+    id: "ray-air",
+    label: "Ray-Air™ – UV-C Air Sanitation Unit",
+    desc: "UL-certified UVC air purifier. 150 sq ft per unit. 5.25 air changes/hr. Wall/ceiling mount or mobile.",
+    sizes: [
+      { dia: 0, label: 'N/A (not a fan – no diameter)' },
+    ]
+  },
+];
+
+// ═══════════════════════════════════════════════════════════
+// MOTOR REFERENCE LOAD INVENTORY
+// Inherited model data is not a verified VFD input-current or protective-device table.
+// Other-voltage / single-phase input currents are intentionally not extrapolated.
+const AMP_DATA = {
+  'z-tech': {
+    // dia (ft) → amps @ 480V 3ph
+    8:  2.65, 10: 2.65, 12: 2.65, 14: 2.65, 16: 2.65,
+    18: 3.5,  20: 3.5,  22: 3.5,  24: 3.5
+  },
+  'z-chill': {
+    // Same motor/VFD as Z-Tech, same amp draw
+    16: 2.65, 18: 3.5, 20: 3.5, 22: 3.5, 24: 3.5
+  },
+  'z-tech3': {
+    // 3-blade, same 2HP motor family
+    8: 2.65, 10: 2.65, 12: 2.65, 16: 2.65, 20: 3.5, 24: 3.5
+  },
+  'conzumer': {
+    // Plugs into 20A outlet, ~8A draw (120V/1ph - no VFD)
+    12: 8.0
+  },
+  'taz': {
+    // In-aisle, smaller motor
+    3: 3.5, 6: 5.0
+  },
+  'ray-air': {}
+};
+
+// Voltage scaling: get actual amps at the supply voltage
+function getAmpsAtVoltage(productId,diaft,voltKey){
+  const table=AMP_DATA[productId],base=table&&table[diaft];if(!base)return null;
+  if(productId==='conzumer')return voltKey==='120V 1ph'?base:null;
+  // The inherited table is a motor reference at 480 V, not a drive-input-current table.
+  // Do not infer single-phase or other-voltage input current with a simple voltage ratio.
+  return voltKey==='480V 3ph'?base:null;
+}
+
+function getMinBreakerSize(){return null;} // Protective device is recorded from approved design/manual; never inferred from motor FLA alone.
+function planningBreakerSize(amps){
+  const target=Number(amps)*1.25;
+  return Number.isFinite(target)&&target>0 ? [15,20,25,30,35,40,45,50,60,70,80,90,100,110,125,150,175,200,225,250,300,350,400].find(n=>n>=target)||null : null;
+}
+
+function calcBreakerSummary(fans) {
+  // Build a list of all turnkey fans with their electrical data
+  const fanData = [];
+  fans.forEach(f => {
+    const id = f.id;
+    if (getRadioVal('fanScope', id) !== 'turnkey') return;
+    const pid = val('fanModelSel-' + id);
+    const diaEl = document.getElementById('fanDia-' + id);
+    const dia = diaEl ? parseFloat(diaEl.value) : 0;
+    const voltRaw = val('fanVolt-' + id);
+    const loc = val('fanLoc-' + id) || 'Fan #' + id;
+    const pwrSrc = getRadioVal('fanPwrSrc', id); // 'panel' or 'lastfan'
+    if (!pid || !dia || !voltRaw || voltRaw === 'Other' || !pwrSrc) return;
+    const amps = getAmpsAtVoltage(pid, dia, voltRaw);
+    if (!amps) return;
+    const is1ph = voltRaw.includes('1ph');
+    const phase = is1ph ? '1ph' : '3ph';
+    const poles = is1ph ? 2 : 3;
+    fanData.push({ id, loc, pid, dia, voltRaw, amps, phase, poles, pwrSrc });
+  });
+
+  // Group fans into circuits:
+  // - A fan with pwrSrc === 'panel' (or unset, treated as panel) starts a NEW circuit
+  // - A fan with pwrSrc === 'lastfan' is appended to the most recently opened circuit
+  // Group by voltage too — different voltages must be separate circuits
+  const circuits = [];
+  fanData.forEach(f => {
+    const isChained = f.pwrSrc === 'lastfan';
+    // Try to find the last open circuit with the same voltage to chain onto
+    const lastCircuit = circuits.length > 0 ? circuits[circuits.length - 1] : null;
+    if (isChained && lastCircuit && lastCircuit.voltRaw === f.voltRaw) {
+      lastCircuit.fans.push(f);
+      lastCircuit.totalAmps = +(lastCircuit.totalAmps + f.amps).toFixed(2);
+    } else {
+      // New circuit — starts from panel
+      circuits.push({
+        voltRaw: f.voltRaw,
+        phase: f.phase,
+        poles: f.poles,
+        fans: [f],
+        totalAmps: f.amps
+      });
+    }
+  });
+
+  // For each circuit, calculate the required breaker size based on TOTAL amps on that circuit
+  circuits.forEach(c => {
+    // NEC: breaker ≥ 125% of total FLA on the circuit
+    c.breakerSize = null;
+    c.usableAmps = null;
+    c.overloaded = false;
+  });
+
+  return circuits;
+}
+
+function renderBreakerCard(fanId) {
+  const scope = getRadioVal('fanScope', fanId);
+  const container = document.getElementById('fanBreakerResult-' + fanId);
+  if (!container) return;
+  if (scope !== 'turnkey') { container.innerHTML = ''; return; }
+
+  const pid = val('fanModelSel-' + fanId);
+  const diaEl = document.getElementById('fanDia-' + fanId);
+  const dia = diaEl ? parseFloat(diaEl.value) : 0;
+  const voltRaw = val('fanVolt-' + fanId);
+  const pwrSrc = getRadioVal('fanPwrSrc', fanId);
+
+  if (!pid || !dia || !voltRaw || voltRaw === 'Other') {
+    container.innerHTML = `<div class="alert alert-info" style="margin-top:10px"><span class="alert-icon">💡</span><span>Select product, diameter, and voltage to see breaker info.</span></div>`;
+    return;
+  }
+
+  const amps = getAmpsAtVoltage(pid, dia, voltRaw);
+  if (!amps) { container.innerHTML = '<div class="alert alert-warn">Reference current not available for this model/supply. Check the motor nameplate and VFD input rating.</div>'; return; }
+
+  const is1ph = voltRaw.includes('1ph');
+  const phase = is1ph ? '1ph' : '3ph';
+  const poles = is1ph ? 2 : 3;
+
+  if (pwrSrc === 'lastfan') {
+    container.innerHTML = `
+      <div class="breaker-result" style="margin-top:12px">
+        <div class="breaker-result-title">🔗 Daisy-Chain – Fan Load</div>
+        <div class="breaker-grid">
+          <div class="breaker-stat"><div class="breaker-stat-label">This Fan FLA</div><div class="breaker-stat-val">${amps}A</div></div>
+          <div class="breaker-stat"><div class="breaker-stat-label">Supply</div><div class="breaker-stat-val">${voltRaw}</div></div>
+          <div class="breaker-stat"><div class="breaker-stat-label">Breaker</div><div class="breaker-stat-val" style="color:#aaa;font-size:13px">Shared – see Summary</div></div>
+          <div class="breaker-stat"><div class="breaker-stat-label">Poles</div><div class="breaker-stat-val">${poles}-Pole</div></div>
+        </div>
+        <div style="font-size:12px;color:var(--text3);margin-top:6px">
+          This fan shares a breaker circuit with its chain. See the Summary tab for total circuit load and breaker size.
+        </div>
+      </div>`;
+  } else {
+    const breakerSize = getMinBreakerSize(amps, phase);
+    container.innerHTML = `
+      <div class="breaker-result" style="margin-top:12px">
+        <div class="breaker-result-title">⚡ Reference Load (Panel Feed)</div>
+        <div class="breaker-grid">
+          <div class="breaker-stat"><div class="breaker-stat-label">Fan FLA</div><div class="breaker-stat-val">${amps}A</div></div>
+          <div class="breaker-stat"><div class="breaker-stat-label">Supply</div><div class="breaker-stat-val">${voltRaw}</div></div>
+          <div class="breaker-stat"><div class="breaker-stat-label">Protection</div><div class="breaker-stat-val red">${esc(val('fanBreaker-'+fanId)||'Not checked')}</div></div>
+          <div class="breaker-stat"><div class="breaker-stat-label">Poles</div><div class="breaker-stat-val">${poles}-Pole</div></div>
+        </div>
+        <div style="font-size:12px;color:var(--text3);margin-top:6px">
+          Reference load only. Record input ratings, conductor conditions, and protective device from the matched manufacturer instructions and approved circuit design.
+        </div>
+      </div>`;
+  }
+}
+
+function renderAggregateBreakerSummary() {
+  const container = document.getElementById('aggregateBreakerCard');
+  if (!container) return;
+
+  const circuits = calcBreakerSummary(fans);
+
+  if (circuits.length === 0) {
+    container.innerHTML = `<div style="color:var(--text3);font-size:14px">Load inventory incomplete. Select scope and power source; verify current for each selected model and supply. Other-voltage input currents are not inferred from the 480 V motor table.</div>`;
+    return;
+  }
+
+  let html = '';
+  circuits.forEach((c, idx) => {
+    const fanNames = c.fans.map(f => esc(f.loc)).join(' → ');
+    const overloadWarn = c.overloaded
+      ? `<div class="alert alert-danger" style="margin-top:8px"><span class="alert-icon">🚫</span><div><strong>Circuit Overloaded:</strong> ${c.totalAmps}A total exceeds 80% of ${c.breakerSize}A breaker (${c.usableAmps}A usable). Split this chain or upsize breaker.</div></div>`
+      : '';
+    const chainNote = c.fans.length > 1
+      ? `<strong>Chain:</strong> ${fanNames}<br>`
+      : `<strong>Fan:</strong> ${fanNames}<br>`;
+
+    html += `
+      <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;color:var(--primary-light);margin-bottom:10px">
+          ⚡ Circuit ${idx + 1} — ${c.voltRaw} — ${c.fans.length} Fan${c.fans.length > 1 ? 's' : ''}
+        </div>
+        <div class="breaker-grid">
+          <div class="breaker-stat"><div class="breaker-stat-label">Total FLA</div><div class="breaker-stat-val">${c.totalAmps.toFixed(1)}A</div></div>
+          <div class="breaker-stat"><div class="breaker-stat-label">Planning only — not verified</div><div class="breaker-stat-val">${planningBreakerSize(c.totalAmps)?planningBreakerSize(c.totalAmps)+'A':'Review required'}</div></div>
+          <div class="breaker-stat"><div class="breaker-stat-label">Capacity</div><div class="breaker-stat-val">Not verified</div></div>
+          <div class="breaker-stat"><div class="breaker-stat-label">Protection</div><div class="breaker-stat-val red">${esc(val('fanBreaker-'+c.fans[0].id)||'Not checked')}</div></div>
+          <div class="breaker-stat"><div class="breaker-stat-label">Poles</div><div class="breaker-stat-val">${c.poles}-Pole</div></div>
+        </div>
+        ${overloadWarn}
+        <div style="font-size:12px;color:var(--text3);margin-top:8px;line-height:1.6">
+          ${chainNote}
+          <strong>Reference load tally:</strong> ${c.fans.map(f => f.amps + 'A').join(' + ')} = ${c.totalAmps.toFixed(1)}A. Protective device and permissible circuit load remain unverified.<br>
+          <em>Planning number rounds 125% of the reference FLA up to the next common size. It is not a protective-device selection; verify drive input data, manufacturer instructions, conductor protection, field conditions and local code.</em>
+        </div>
+      </div>`;
+  });
+
+  // Totals row
+  const unverifiedFans=fans.filter(f=>getRadioVal('fanScope',f.id)==='turnkey').length-circuits.reduce((n,c)=>n+c.fans.length,0);if(unverifiedFans>0)html+='<div class="alert alert-warn">'+unverifiedFans+' turnkey fan(s) excluded: reference current, supply, or power source not checked.</div>';
+  const totalBreakers = circuits.length;
+  const totalFans = circuits.reduce((s, c) => s + c.fans.length, 0);
+  html += `<div style="padding-top:10px;font-size:13px;font-weight:600;color:var(--text2)">
+    ${totalBreakers} breaker circuit${totalBreakers > 1 ? 's' : ''} covering ${totalFans} fan${totalFans > 1 ? 's' : ''}
+  </div>`;
+
+  container.innerHTML = html;
+}
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  document.querySelectorAll('[data-page]').forEach(el => {
+    el.classList.toggle('active', el.dataset.page === id);
+  });
+  if (id === 'summary') updateSummary();
+}
+
+// ═══════════════════════════════════════════════════════════
+// DARK MODE
+// ═══════════════════════════════════════════════════════════
+function toggleDark() {
+  darkMode = !darkMode;
+  document.body.classList.toggle('dark', darkMode);
+}
+
+// ═══════════════════════════════════════════════════════════
+// AFTER HOURS TOGGLE
+// ═══════════════════════════════════════════════════════════
+function toggleAfterHours() {
+  if(!afterHoursChecked){afterHours=true;afterHoursChecked=true;}else if(afterHours){afterHours=false;}else{afterHoursChecked=false;afterHours=false;}
+  const btn = document.getElementById('afterBtn');
+  btn.textContent = !afterHoursChecked ? 'Not checked' : afterHours ? 'Yes' : 'No';
+  btn.className = 'toggle-btn ' + (afterHours ? 'on' : 'off');
+  document.getElementById('afterHoursNote').classList.toggle('hidden', !afterHours);
+  updateSummary();
+}
+
+// ═══════════════════════════════════════════════════════════
+// FAN MANAGEMENT
+// ═══════════════════════════════════════════════════════════
+function addFan() {
+  fanCounter++;
+  const id = fanCounter;
+  fans.push({ id });
+  document.getElementById('noFansMsg').classList.add('hidden');
+  renderFanCard(id);
+  updateFanCount();
+  updateSummary();
+  updateFanPhotoList();
+  updateAerialSummary();
+  // scroll to new card
+  setTimeout(() => {
+    const el = document.getElementById('fan-card-' + id);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 50);
+}
+
+function updateFanCount() {
+  document.getElementById('fanCount').textContent = fans.length + (fans.length === 1 ? ' Fan' : ' Fans');
+}
+
+function toggleFanCard(id) {
+  const body = document.getElementById('fan-body-' + id);
+  const caret = document.getElementById('fan-caret-' + id);
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  caret.textContent = isOpen ? '▼' : '▲';
+}
+
+// Tracks { fanId: savedName } for all saved fans
+const savedFanNames = {};
+
+function saveFanCard(id) {
+  const locEl = document.getElementById('fanLoc-' + id);
+  const nameRaw = locEl ? locEl.value.trim() : '';
+  const name = nameRaw || ('Fan #' + id);
+
+  // Check for duplicate against other SAVED fans
+  const duplicate = Object.entries(savedFanNames).find(([otherId, otherName]) =>
+    parseInt(otherId) !== id && otherName.toLowerCase() === name.toLowerCase()
+  );
+
+  if (duplicate) {
+    // Show inline error on the location field
+    const errEl = document.getElementById('fanLocDupErr-' + id);
+    if (errEl) {
+      errEl.textContent = `"${name}" is already used by another fan. Please use a unique name.`;
+      errEl.classList.remove('hidden');
+    }
+    // Shake the field
+    if (locEl) {
+      locEl.style.borderColor = 'var(--danger)';
+      locEl.focus();
+    }
+    return; // Don't save
+  }
+
+  // Clear any previous error
+  const errEl = document.getElementById('fanLocDupErr-' + id);
+  if (errEl) errEl.classList.add('hidden');
+  if (locEl) locEl.style.borderColor = '';
+
+  // Register the saved name
+  savedFanNames[id] = name;
+
+  // Lock the location field
+  if (locEl) {
+    locEl.readOnly = true;
+    locEl.style.background = 'var(--surface2)';
+    locEl.style.color = 'var(--text2)';
+    locEl.title = 'Fan name locked after save. Remove this fan to change it.';
+  }
+
+  // Show unlock hint
+  const lockHint = document.getElementById('fanLocLockHint-' + id);
+  if (lockHint) lockHint.classList.remove('hidden');
+
+  // Collapse the card
+  const body = document.getElementById('fan-body-' + id);
+  const caret = document.getElementById('fan-caret-' + id);
+  if (body) body.classList.remove('open');
+  if (caret) caret.textContent = '▼';
+
+  // Update header label
+  updateFanHeader(id);
+
+  // Green flash on header
+  const header = document.querySelector(`#fan-card-${id} .fan-card-header`);
+  if (header) {
+    header.style.background = 'linear-gradient(135deg,#1a5c1a,#2a8a2a)';
+    setTimeout(() => { header.style.background = ''; }, 900);
+  }
+}
+
+// Remove saved name when fan is deleted
+function removeFan(id) {
+  if (!confirm('Remove this fan?')) return;
+  delete savedFanNames[id];
+  fans = fans.filter(f => f.id !== id);
+  const el = document.getElementById('fan-card-' + id);
+  if (el) el.remove();
+  if (fans.length === 0) document.getElementById('noFansMsg').classList.remove('hidden');
+  updateFanCount();
+  updateSummary();
+  updateFanPhotoList();
+  updateAerialSummary();
+}
+
+function getFanLabel(id) {
+  const locEl = document.getElementById('fanLoc-' + id);
+  return locEl && locEl.value.trim() ? locEl.value.trim() : 'Fan #' + id;
+}
+
+function updateFanHeader(id) {
+  const lbl = document.getElementById('fan-label-' + id);
+  if (lbl) lbl.textContent = getFanLabel(id);
+
+  // Live duplicate check — warn if another SAVED fan already has this name
+  const currentName = getFanLabel(id).toLowerCase();
+  const locEl = document.getElementById('fanLoc-' + id);
+  const errEl = document.getElementById('fanLocDupErr-' + id);
+  if (errEl && locEl && !locEl.readOnly) {
+    const isDup = Object.entries(savedFanNames).some(([otherId, otherName]) =>
+      parseInt(otherId) !== id && otherName.toLowerCase() === currentName
+    );
+    errEl.textContent = isDup ? `⚠️ "${getFanLabel(id)}" is already used by another fan.` : '';
+    errEl.classList.toggle('hidden', !isDup);
+    locEl.style.borderColor = isDup ? 'var(--danger)' : '';
+  }
+
+  checkFanWarnings(id);
+  updateSummary();
+}
+
+function renderFanCard(id) {
+  const productOptions = GFY_PRODUCTS.map(p => `<option value="${p.id}">${p.label}</option>`).join('');
+  const html = `
+  <div class="fan-card" id="fan-card-${id}">
+    <div class="fan-card-header" onclick="toggleFanCard(${id})">
+      <div class="fan-num">${id}</div>
+      <div class="fan-label" id="fan-label-${id}">Fan #${id}</div>
+      <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+        <span style="font-size:11px;opacity:0.7" id="fan-warn-badge-${id}"></span>
+        <span id="fan-caret-${id}" style="font-size:12px">▲</span>
+      </div>
+    </div>
+    <div class="fan-card-body open" id="fan-body-${id}">
+
+      <!-- Location & Ceiling -->
+      <div class="form-grid cols-2">
+        <div class="field">
+          <label>Fan Identifier / Location *
+            <span class="tooltip-wrap"><span class="tip-icon">ℹ️</span><span class="tip">e.g., "North Bay – Fan 1", "Above Loading Dock", "Southwest Corner"</span></span>
+          </label>
+          <input type="text" id="fanLoc-${id}" placeholder='e.g., "North Bay – Fan 1"' oninput="updateFanHeader(${id})">
+          <div id="fanLocDupErr-${id}" class="hidden" style="color:var(--danger);font-size:12px;margin-top:4px;font-weight:600"></div>
+          <div id="fanLocLockHint-${id}" class="hidden" style="color:var(--text3);font-size:11px;margin-top:3px">🔒 Name locked — remove this fan to change it.</div>
+        </div>
+        <div class="field">
+          <label>Ceiling Height at this Location (ft) *
+            <span class="tooltip-wrap"><span class="tip-icon">ℹ️</span><span class="tip">Measure from finished floor to the underside of the structure at the fan's mounting point.</span></span>
+          </label>
+          <input type="number" id="fanCH-${id}" min="10" max="100" placeholder="e.g., 28" oninput="checkFanWarnings(${id});updateSummary()">
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:10px">
+        <label>Special Circumstances / Obstructions at this Location</label>
+        <textarea id="fanObs-${id}" placeholder="Sprinklers, HVAC ducts, lighting, beams, columns, skylights…" oninput="onObstructionInput(${id})"></textarea>
+      </div>
+
+      <div class="fan-section-label">⚙️ Fan Model & Dimensions</div>
+
+      <div class="field">
+        <label>Go Fan Yourself / VividAir Product *</label>
+        <select id="fanModelSel-${id}" onchange="applyGFYProduct(${id})">
+          <option value="">— Select Product —</option>
+          ${productOptions}
+        </select>
+      </div>
+      <div id="fanModelDesc-${id}" class="alert alert-info hidden" style="margin-top:8px">
+        <span class="alert-icon">💡</span><span id="fanModelDescText-${id}"></span>
+      </div>
+
+      <div class="form-grid cols-2" style="margin-top:10px">
+        <div class="field">
+          <label>Fan Diameter *
+            <span class="tooltip-wrap"><span class="tip-icon">ℹ️</span><span class="tip">Sizes auto-load from selected product. Max 24 ft per NFPA 13.</span></span>
+          </label>
+          <select id="fanDia-${id}" onchange="checkFanWarnings(${id});renderBreakerCard(${id});updateSummary()">
+            <option value="">— Select product first —</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Downtube Length (ft)
+            <span class="tooltip-wrap"><span class="tip-icon">ℹ️</span><span class="tip">Default is 1 ft. Increase for higher ceilings or to meet sprinkler clearance. Check 36" clearance to sprinklers.</span></span>
+          </label>
+          <input type="number" id="fanDT-${id}" min="1" max="30" value="1" placeholder="1" oninput="checkFanWarnings(${id});updateSummary()">
+        </div>
+      </div>
+      <div id="fanWarnings-${id}"></div>
+
+      <div class="field" style="margin-top:10px">
+        <label>Mounting Type *</label>
+        <select id="fanMount-${id}" oninput="checkFanHardware(${id});updateSummary()">
+          <option value="">— Select Mounting Type —</option>
+          <option value="Z-Purlin">Z-Purlin</option>
+          <option value="Truss">Truss</option>
+          <option value="I-Beam Steel">I-Beam Steel</option>
+          <option value="I-Beam Wood">I-Beam Wood</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+
+      <div id="fanTrussSpanField-${id}" class="field hidden" style="margin-top:10px">
+        <label>Truss Span at this Fan Location (ft)
+          <span class="tooltip-wrap"><span class="tip-icon">ℹ️</span><span class="tip">Distance between truss members the angle iron will span. Over 10 ft requires doubled angle iron (4 pieces instead of 2).</span></span>
+        </label>
+        <input type="number" id="fanTrussSpan-${id}" min="0" placeholder="e.g., 8" oninput="checkFanHardware(${id});updateSummary()">
+      </div>
+
+      <div id="fanHardwareAlerts-${id}"></div>
+
+      <div class="fan-section-label">🎛️ Control Method</div>
+
+      <div class="field">
+        <label>Control Method *</label>
+        <div class="radio-group" id="fanCtrlGroup-${id}">
+          ${makeRadio('fanCtrl', id, 'vfd', 'Directly from VFD', `onCtrlChange(${id})`)}
+          ${makeRadio('fanCtrl', id, 'keypad', 'Wired Keypad', `onCtrlChange(${id})`)}
+          ${makeRadio('fanCtrl', id, 'navigator', 'Vivid Air Navigator (BACnet)', `onCtrlChange(${id})`)}
+        </div>
+      </div>
+
+      <div id="fanNavSub-${id}" class="sub-indent hidden">
+        <div class="alert alert-info" style="margin-bottom:10px">
+          <span class="alert-icon">📡</span>
+          <span>Navigator (BACnet) requires a 120V outlet at the controller.</span>
+        </div>
+        <div class="field">
+          <label>120V Outlet Present at Controller Location?</label>
+          <div class="toggle-row">
+            <button class="toggle-btn" id="navOutletBtn-${id}" onclick="toggleNavOutlet(${id})">No</button>
+            <span id="navOutletLabel-${id}" style="font-size:13px;color:var(--text3)"></span>
+          </div>
+        </div>
+        <div id="navConduitField-${id}" class="field" style="margin-top:10px">
+          <label>Distance to Run New 120V Conduit / Outlet (ft)</label>
+          <input type="number" id="navConduit-${id}" min="0" placeholder="Feet of conduit needed" oninput="updateSummary()">
+        </div>
+      </div>
+
+      <div class="fan-section-label">🚒 Fire Alarm Interlock</div>
+
+      <div class="field">
+        <label>Fire Alarm Wire Responsibility *</label>
+        <div class="radio-group" id="fanFAGroup-${id}">
+          ${makeRadio('fanFA', id, 'installer', 'Installers Running Fire Alarm Wires', `onFAChange(${id})`)}
+          ${makeRadio('fanFA', id, 'customer', 'Customer Responsible', `onFAChange(${id})`)}
+        </div>
+      </div>
+
+      <div id="fanFASub-${id}" class="sub-indent hidden">
+        <div class="alert alert-warn" style="margin-bottom:10px">
+          <span class="alert-icon">⚠️</span>
+          <span>Installers will run wire and terminate at VFD only. <strong>Customer to connect at FAP.</strong></span>
+        </div>
+        <div class="form-grid cols-2">
+          <div class="field">
+            <label>FAP Location / Landing Point</label>
+            <input type="text" id="fanFAP-${id}" placeholder="e.g., East wall, electrical room">
+          </div>
+          <div class="field">
+            <label>Approx. Distance to Run FA Wire (ft)</label>
+            <input type="number" id="fanFADist-${id}" min="0" placeholder="Feet" oninput="updateSummary()">
+          </div>
+        </div>
+      </div>
+
+      <div class="fan-section-label">⚡ Electrical Scope</div>
+
+      <div class="field">
+        <label>Scope Type *</label>
+        <div class="radio-group" id="fanScopeGroup-${id}">
+          ${makeRadio('fanScope', id, 'turnkey', 'Turnkey (Full Power)', `onScopeChange(${id})`)}
+          ${makeRadio('fanScope', id, 'mechonly', 'Mechanical (Hang Only)', `onScopeChange(${id})`)}
+          ${makeRadio('fanScope', id, 'mechconn', 'Mechanical + Connections', `onScopeChange(${id})`)}
+        </div>
+      </div>
+
+      <div id="fanTurnkeySub-${id}" class="sub-indent hidden">
+
+        <div class="field">
+          <label>Line Side Power Source *
+            <span class="tooltip-wrap"><span class="tip-icon">ℹ️</span><span class="tip">Does this fan home-run back to the panel, or does it tap line side power from the previous fan's VFD?</span></span>
+          </label>
+          <div class="radio-group" id="fanPwrSrcGroup-${id}">
+            <label class="radio-option" id="fanPwrSrc-opt-${id}-panel">
+              <input type="radio" name="fanPwrSrc-${id}" value="panel" onchange="onPwrSrcChange(${id})">
+              🔌 From Electrical Panel
+            </label>
+            <label class="radio-option" id="fanPwrSrc-opt-${id}-lastfan">
+              <input type="radio" name="fanPwrSrc-${id}" value="lastfan" onchange="onPwrSrcChange(${id})">
+              🔗 Daisy-Chain from Previous Fan
+            </label>
+          </div>
+          <div id="fanDaisyLockNote-${id}" class="alert alert-danger hidden" style="margin-top:6px">
+            <span class="alert-icon">🚫</span>
+            <span>Circuit is at 80% capacity — daisy-chain not available. This fan must feed from the panel.</span>
+          </div>
+          <div id="fanDaisyLockWarn-${id}" class="alert alert-warn hidden" style="margin-top:6px">
+            <span class="alert-icon">⚠️</span>
+            <span>Circuit capacity is not verified. Confirm the actual supply, protective device, and manufacturer-permitted wiring arrangement.</span>
+          </div>
+        </div>
+
+        <div id="fanPwrPanelSub-${id}" class="hidden" style="margin-top:10px">
+          <div class="alert alert-info" style="margin-bottom:10px">
+            <span class="alert-icon">🔌</span>
+            <span>Home run from electrical panel to this fan's VFD/controller.</span>
+          </div>
+          <div class="form-grid cols-2">
+            <div class="field">
+              <label>Distance: Panel → Controller (ft)</label>
+              <input type="number" id="fanPC-${id}" min="0" placeholder="Feet" oninput="updateSummary()">
+            </div>
+            <div class="field">
+              <label>Distance: Controller → Motor (ft)</label>
+              <input type="number" id="fanCM-${id}" min="0" placeholder="Feet" oninput="updateSummary()">
+            </div>
+          </div>
+        </div>
+
+        <div id="fanPwrDaisySub-${id}" class="hidden" style="margin-top:10px">
+          <div class="alert alert-warn" style="margin-bottom:10px">
+            <span class="alert-icon">🔗</span>
+            <div><strong>Daisy-Chain:</strong> Only manufacturer-approved supply-side power distribution. Never feed another drive from a VFD motor-output terminal. Verify upstream breaker capacity covers combined load of all chained fans.</div>
+          </div>
+          <div class="form-grid cols-2">
+            <div class="field">
+              <label>Distance: Last Fan VFD → This Controller (ft)</label>
+              <input type="number" id="fanDC-${id}" min="0" placeholder="Feet" oninput="updateSummary()">
+            </div>
+            <div class="field">
+              <label>Distance: Controller → Motor (ft)</label>
+              <input type="number" id="fanDCM-${id}" min="0" placeholder="Feet" oninput="updateSummary()">
+            </div>
+            <div class="field" style="grid-column:1/-1">
+              <label>Source Fan / VFD Location</label>
+              <input type="text" id="fanDaisySrc-${id}" placeholder='e.g., "Fan 1 – North Bay VFD"' oninput="updateSummary()">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-grid cols-2" style="margin-top:12px">
+          <div class="field">
+            <label>Voltage Supply</label>
+            <select id="fanVolt-${id}" onchange="renderBreakerCard(${id});updateSummary()">
+              <option value="">— Select Voltage —</option>
+              <option value="480V 3ph">480V 3-Phase (Preferred)</option>
+              <option value="208V 3ph">208V 3-Phase</option>
+              <option value="240V 3ph">240V 3-Phase</option>
+              <option value="240V 1ph">240V Single Phase</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Breaker Size &amp; Manufacturer <span style="font-weight:400;opacity:0.7">(override / notes)</span></label>
+            <input type="text" id="fanBreaker-${id}" placeholder='e.g., "30A – Square D"'>
+          </div>
+        </div>
+        <div id="fanBreakerResult-${id}"></div>
+      </div>
+
+      <div class="fan-section-label">📝 Notes for this Fan</div>
+      <div class="field">
+        <textarea id="fanNotes-${id}" placeholder="Any additional notes, customer requests, or special conditions for this fan…" oninput="updateSummary()"></textarea>
+      </div>
+
+      <div class="fan-section-label">📷 Photo Checklist – This Fan</div>
+      <div id="fanInlinePhotos-${id}" class="fan-inline-photos">
+        <div class="photo-item">
+          <label class="photo-check-label">
+            <input type="checkbox" class="photo-cb fan-photo-cb-${id}" onchange="updatePhotoProgress();updateInlinePhotoProgress(${id})">
+            <div class="photo-check-content">
+              <div class="photo-check-title">Overview / Wide Shot of Location</div>
+              <div class="photo-check-sub">Full bay view showing where the fan will go</div>
+            </div>
+          </label>
+        </div>
+        <div class="photo-item">
+          <label class="photo-check-label">
+            <input type="checkbox" class="photo-cb fan-photo-cb-${id}" onchange="updatePhotoProgress();updateInlinePhotoProgress(${id})">
+            <div class="photo-check-content">
+              <div class="photo-check-title">Ceiling / Structure at Mounting Point</div>
+              <div class="photo-check-sub">Close-up of the purlin, truss, or beam</div>
+            </div>
+          </label>
+        </div>
+        <div id="fanPhotoObstacle-${id}" class="photo-item hidden">
+          <label class="photo-check-label">
+            <input type="checkbox" class="photo-cb fan-photo-cb-${id}" onchange="updatePhotoProgress();updateInlinePhotoProgress(${id})">
+            <div class="photo-check-content">
+              <div class="photo-check-title">📸 Obstruction / Obstacle Photo</div>
+              <div class="photo-check-sub">Obstruction noted — photo required. Show HVAC, beams, lights, or whatever is in the way.</div>
+            </div>
+          </label>
+        </div>
+      </div>
+      <div id="fanPhotoProgress-${id}" style="font-size:12px;color:var(--text3);margin-top:4px;text-align:right"></div>
+
+      <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center;gap:10px;padding-top:14px;border-top:1px solid var(--border)">
+        <button class="btn btn-danger btn-sm" onclick="removeFan(${id})">🗑 Remove</button>
+        <button class="btn btn-primary" onclick="saveFanCard(${id})" style="flex:1;max-width:200px;justify-content:center">✔ Save &amp; Minimize</button>
+      </div>
+    </div>
+  </div>`;
+  document.getElementById('fanList').insertAdjacentHTML('beforeend', html);
+  // init radio groups
+  initRadioGroup('fanCtrl', id);
+  initRadioGroup('fanFA', id);
+  initRadioGroup('fanScope', id);
+  initRadioGroup('fanPwrSrc', id);
+  // init nav outlet state
+  window['navOutlet_' + id] = false;
+}
+
+function makeRadio(name, id, val, label, onchange) {
+  return `<label class="radio-option" id="${name}-opt-${id}-${val}">
+    <input type="radio" name="${name}-${id}" value="${val}" onchange="${onchange}">
+    ${label}
+  </label>`;
+}
+
+function initRadioGroup(name, id) {
+  const inputs = document.querySelectorAll(`input[name="${name}-${id}"]`);
+  if(inputs.length){const group=inputs[0].closest('.radio-group')||inputs[0].parentElement.parentElement; if(!group.querySelector('.unchecked-note')){const note=document.createElement('small');note.className='unchecked-note';note.textContent='Not checked';note.style.cssText='display:block;color:var(--ws-muted);font-size:11px;margin:6px 0';group.appendChild(note);const refresh=()=>{note.hidden=Array.from(inputs).some(i=>i.checked);note.style.display=note.hidden?'none':'block';};inputs.forEach(i=>i.addEventListener('change',refresh));refresh();}}
+  inputs.forEach(inp => {
+    inp.addEventListener('change', () => {
+      inputs.forEach(i => {
+        i.closest('.radio-option').classList.toggle('selected', i.checked);
+      });
+    });
+  });
+}
+
+function getRadioVal(name, id) {
+  const inp = document.querySelector(`input[name="${name}-${id}"]:checked`);
+  return inp ? inp.value : '';
+}
+
+function onCtrlChange(id) {
+  const val = getRadioVal('fanCtrl', id);
+  document.getElementById('fanNavSub-' + id).classList.toggle('hidden', val !== 'navigator');
+  updateSummary();
+}
+
+function onFAChange(id) {
+  const val = getRadioVal('fanFA', id);
+  document.getElementById('fanFASub-' + id).classList.toggle('hidden', val !== 'installer');
+  updateSummary();
+}
+
+function onPwrSrcChange(id) {
+  const v = getRadioVal('fanPwrSrc', id);
+  document.getElementById('fanPwrPanelSub-' + id).classList.toggle('hidden', v !== 'panel');
+  document.getElementById('fanPwrDaisySub-' + id).classList.toggle('hidden', v !== 'lastfan');
+  checkCircuitLocks();
+  updateSummary();
+}
+
+// Checks each fan's daisy-chain option: if selecting "daisy" would push the
+// current open circuit over 80% of a 20A breaker, lock that option out.
+function checkCircuitLocks() {
+  // Do not silently change the user's wiring choice using an assumed 20 A circuit.
+  fans.forEach(f=>{const id=f.id;const option=document.getElementById('fanPwrSrc-opt-'+id+'-lastfan');if(option){option.style.opacity='';option.style.pointerEvents='';}const input=document.querySelector(`input[name="fanPwrSrc-${id}"][value="lastfan"]`);if(input)input.disabled=false;const note=document.getElementById('fanDaisyLockNote-'+id);if(note)note.classList.add('hidden');const warn=document.getElementById('fanDaisyLockWarn-'+id);if(warn)warn.classList.add('hidden');});
+}
+
+function onScopeChange(id) {
+  const val = getRadioVal('fanScope', id);
+  document.getElementById('fanTurnkeySub-' + id).classList.toggle('hidden', val !== 'turnkey');
+  updateFanPhotoList();
+  updateSummary();
+}
+
+function toggleNavOutlet(id) {
+  window['navOutlet_' + id] = !window['navOutlet_' + id];
+  const isPresent = window['navOutlet_' + id];
+  const btn = document.getElementById('navOutletBtn-' + id);
+  btn.textContent = isPresent ? 'Yes' : 'No';
+  btn.className = 'toggle-btn ' + (isPresent ? 'on' : 'off');
+  document.getElementById('navConduitField-' + id).classList.toggle('hidden', isPresent);
+  updateSummary();
+}
+
+function applyGFYProduct(id) {
+  const sel = document.getElementById('fanModelSel-' + id);
+  const diaSelect = document.getElementById('fanDia-' + id);
+  const descBox = document.getElementById('fanModelDesc-' + id);
+  const descText = document.getElementById('fanModelDescText-' + id);
+  const pid = sel.value;
+  const product = GFY_PRODUCTS.find(p => p.id === pid);
+
+  if (!product) {
+    diaSelect.innerHTML = '<option value="">— Select product first —</option>';
+    descBox.classList.add('hidden');
+    return;
+  }
+
+  // Populate diameter options
+  diaSelect.innerHTML = '<option value="">— Select Size —</option>' +
+    product.sizes.map(s => `<option value="${s.dia}">${s.label}</option>`).join('');
+
+  // Auto-select if only one size
+  if (product.sizes.length === 1) {
+    diaSelect.value = product.sizes[0].dia;
+  }
+
+  // Show description
+  descText.textContent = product.desc;
+  descBox.classList.remove('hidden');
+
+  checkFanWarnings(id);
+  renderBreakerCard(id);
+  updateSummary();
+}
+
+// ═══════════════════════════════════════════════════════════
+// WARNINGS PER FAN
+// ═══════════════════════════════════════════════════════════
+function checkFanWarnings(id) {
+  const ch = parseFloat(document.getElementById('fanCH-' + id)?.value) || 0;
+  const dia = parseFloat(document.getElementById('fanDia-' + id)?.value) || 0;
+  const dt = parseFloat(document.getElementById('fanDT-' + id)?.value) || 1;
+  const container = document.getElementById('fanWarnings-' + id);
+  const card = document.getElementById('fan-card-' + id);
+  if (!container) return;
+
+  let warns = [];
+  let errors = [];
+
+  const bladeH = ch - dt;
+  const floorClear = bladeH; // approx
+
+  if (ch > 0 && bladeH < 10) {
+    errors.push('Floor-to-blade clearance is less than 10 ft minimum (' + bladeH.toFixed(1) + ' ft estimated). Adjust downtube or verify ceiling height.');
+  }
+  if (dia > 24) {
+    warns.push('Diameter exceeds 24 ft. Verify sprinkler-system scope, adopted requirements, and manufacturer instructions; this app cannot establish approval.');
+  }
+  if (dia > 0 && ch > 0 && dia > bladeH) {
+    warns.push('Fan diameter (' + dia + ' ft) exceeds floor-to-blade clearance (' + bladeH.toFixed(1) + ' ft). Verify the selected fan and mounting requirements. A longer downtube lowers the blades and reduces floor clearance.');
+  }
+  if (dia > 0 && ch > 0 && dia > (bladeH * 0.85)) {
+    if (!warns.some(w => w.includes('exceeds'))) {
+      warns.push('Fan diameter is approaching the floor-to-blade limit. Verify sprinkler layout and clearances.');
+    }
+  }
+  if (dt > 4) {
+    warns.push('Long downtube (' + dt + ' ft) – verify 36" clearance to sprinkler deflectors and 10 ft floor clearance.');
+  }
+  if (ch > 0 && ch < 14) {
+    warns.push('Low ceiling height (' + ch + ' ft). Ensure at least 10 ft floor-to-blade clearance.');
+  }
+
+  let html = '';
+  errors.forEach(e => { html += `<div class="alert alert-danger" style="margin-top:8px"><span class="alert-icon">🚫</span><div>${e}</div></div>`; });
+  warns.forEach(w => { html += `<div class="alert alert-warn" style="margin-top:8px"><span class="alert-icon">⚠️</span><div>${w}</div></div>`; });
+
+  container.innerHTML = html;
+
+  const badge = document.getElementById('fan-warn-badge-' + id);
+  if (badge) {
+    if (errors.length) { badge.textContent = '🚫'; card.className = 'fan-card has-error'; }
+    else if (warns.length) { badge.textContent = '⚠️'; card.className = 'fan-card has-warning'; }
+    else { badge.textContent = ''; card.className = 'fan-card'; }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// LIVE SUMMARY
+// ═══════════════════════════════════════════════════════════
+function updateSummary() {
+  updateJobSummary();
+  const statsEl = document.getElementById('summaryStats');
+  const warningsEl = document.getElementById('warningsList');
+  const breakdownsEl = document.getElementById('fanBreakdowns');
+  if (!statsEl) return;
+  if (fans.length === 0) {
+    statsEl.innerHTML = `<div class="alert alert-info"><span class="alert-icon">💡</span><span>Add fans in the Fan Layout tab to see aggregated totals here.</span></div>`;
+    if (warningsEl) warningsEl.innerHTML = `<div style="color:var(--text3);font-size:14px">No warnings yet.</div>`;
+    if (breakdownsEl) breakdownsEl.innerHTML = '';
+    return;
+  }
+
+  // Collect data
+  let totalPCdist = 0, totalCMdist = 0;
+  let dtCounts = {}; // e.g. { '1': 4, '2': 1, '3': 1 }
+  let mounts = {}, navCount = 0, navConduitTotal = 0, faCount = 0, faDistTotal = 0;
+  let guyWireCount = 0, doubleAngleCount = 0;
+  let warnings = [];
+  let breakdownHTML = '';
+
+  if (afterHours) warnings.push({ type: 'warn', msg: 'After-hours access required – verify additional labor costs.' });
+
+  // Check if any turnkey fan is panel-fed — warn if all are daisy-chain
+  const turnkeyFans = fans.filter(f => getRadioVal('fanScope', f.id) === 'turnkey');
+  const panelFedCount = turnkeyFans.filter(f => getRadioVal('fanPwrSrc', f.id) === 'panel').length;
+  if (turnkeyFans.length > 0 && panelFedCount === 0) {
+    warnings.push({ type: 'error', msg: '⚡ No fan is set as the panel feed source. At least one Turnkey fan must have "From Electrical Panel" selected as its power source.' });
+  }
+
+  // Update circuit locks on power source options
+  checkCircuitLocks();
+
+  fans.forEach(f => {
+    const id = f.id;
+    const loc = val('fanLoc-' + id) || 'Fan #' + id;
+    const ch = parseFloat(val('fanCH-' + id)) || 0;
+    const dia = parseFloat(val('fanDia-' + id)) || 0;
+    const dt = parseFloat(val('fanDT-' + id)) || 1;
+    const mount = val('fanMount-' + id);
+    const ctrl = getRadioVal('fanCtrl', id);
+    const fa = getRadioVal('fanFA', id);
+    const scope = getRadioVal('fanScope', id);
+    const pwrSrc = getRadioVal('fanPwrSrc', id);
+    // Read the correct distance fields based on power source
+    const pc = pwrSrc === 'lastfan'
+      ? parseFloat(val('fanDC-' + id)) || 0    // daisy: last-fan VFD → this controller
+      : parseFloat(val('fanPC-' + id)) || 0;   // panel: panel → controller
+    const cm = pwrSrc === 'lastfan'
+      ? parseFloat(val('fanDCM-' + id)) || 0   // daisy: controller → motor
+      : parseFloat(val('fanCM-' + id)) || 0;   // panel: controller → motor
+    const navOutletPresent = window['navOutlet_' + id];
+    const navConduit = parseFloat(val('navConduit-' + id)) || 0;
+    const faDistFt = parseFloat(val('fanFADist-' + id)) || 0;
+
+    const dtKey = String(dt);
+    dtCounts[dtKey] = (dtCounts[dtKey] || 0) + 1;
+    if (mount) mounts[mount] = (mounts[mount] || 0) + 1;
+    // Conduit: always add both legs for all turnkey fans regardless of power source
+    if (scope === 'turnkey') { totalPCdist += pc; totalCMdist += cm; }
+    if (ctrl === 'navigator') {
+      navCount++;
+      if (!navOutletPresent) navConduitTotal += navConduit;
+    }
+    if (fa === 'installer') { faCount++; faDistTotal += faDistFt; }
+    // Hardware rules
+    if (dt > 3) guyWireCount++;
+    const trussSpan = parseFloat(document.getElementById('fanTrussSpan-' + id)?.value) || 0;
+    if (mount === 'Truss' && trussSpan > 10) doubleAngleCount++;
+
+    // Warnings
+    const bladeH = ch - dt;
+    if (ch > 0 && bladeH < 10) warnings.push({ type: 'error', msg: `${loc}: Floor-to-blade clearance below 10 ft minimum.` });
+    if (dia > 24) warnings.push({ type: 'error', msg: `${loc}: Diameter exceeds 24 ft NFPA limit.` });
+    if (dia > 0 && ch > 0 && dia > bladeH) warnings.push({ type: 'warn', msg: `${loc}: Diameter (${dia} ft) exceeds floor-to-blade clearance. Review sizing.` });
+    if (ctrl === 'navigator' && !navOutletPresent) warnings.push({ type: 'warn', msg: `${loc}: Navigator selected – 120V outlet not present. Conduit run required.` });
+    if (fa === 'installer') warnings.push({ type: 'info', msg: `${loc}: Installers running fire alarm wire to VFD. Customer connects at FAP.` });
+    if (!mount) warnings.push({ type: 'warn', msg: `${loc}: Mounting type not selected.` });
+    if (dt > 3) warnings.push({ type: 'warn', msg: `${loc}: Downtube ${dt} ft > 3 ft — Guy wire stabilization kit required.` });
+    const trussSpanW = parseFloat(document.getElementById('fanTrussSpan-' + id)?.value) || 0;
+    if (mount === 'Truss' && trussSpanW > 10) warnings.push({ type: 'warn', msg: `${loc}: Truss span ${trussSpanW} ft > 10 ft — Double angle iron required (4 pieces).` });
+    warnings.push({ type: 'info', msg: `${loc}: Verify sprinkler layout – fan centered between 4 sprinklers, 36" clearance to deflectors.` });
+
+    // Per-fan breakdown
+    const pid = val('fanModelSel-' + id);
+    const product = GFY_PRODUCTS.find(p => p.id === pid);
+    const model = product ? product.label : '—';
+    const diaEl = document.getElementById('fanDia-' + id);
+    const diaLabel = diaEl && diaEl.selectedIndex > 0 ? diaEl.options[diaEl.selectedIndex].text : (dia ? dia + ' ft' : '—');
+    breakdownHTML += `
+    <div style="margin-bottom:12px">
+      <div class="collapsible-header" onclick="toggleCollapsible('fbd-${id}')">
+        <div class="ch-title">🌀 Fan #${id} – ${esc(loc)}</div>
+        <span class="caret" id="fbd-caret-${id}">▼</span>
+      </div>
+      <div class="collapsible-body" id="fbd-${id}">
+        <div class="summary-stat"><span class="stat-label">Model</span><span class="stat-val" style="font-size:13px;text-align:right;max-width:65%;font-family:'Barlow',sans-serif;font-weight:600">${esc(model)}</span></div>
+        <div class="summary-stat"><span class="stat-label">Diameter</span><span class="stat-val">${diaLabel}</span></div>
+        <div class="summary-stat"><span class="stat-label">Ceiling Height</span><span class="stat-val">${ch ? ch + ' ft' : '—'}</span></div>
+        <div class="summary-stat"><span class="stat-label">Downtube</span><span class="stat-val">${dt} ft</span></div>
+        <div class="summary-stat"><span class="stat-label">Mounting</span><span class="stat-val">${mount || 'Not checked'}</span></div>
+        <div class="summary-stat"><span class="stat-label">Control</span><span class="stat-val">${ctrlLabel(ctrl)}</span></div>
+        <div class="summary-stat"><span class="stat-label">Fire Alarm</span><span class="stat-val">${faLabel(fa)}</span></div>
+        <div class="summary-stat"><span class="stat-label">Scope</span><span class="stat-val">${scopeLabel(scope)}</span></div>
+        ${scope === 'turnkey' ? `
+          <div class="summary-stat"><span class="stat-label">Power Source</span><span class="stat-val" style="font-size:13px">${pwrSrc === 'lastfan' ? '🔗 Daisy-chain' : '🔌 From Panel'}</span></div>
+          <div class="summary-stat"><span class="stat-label">${pwrSrc === 'lastfan' ? 'Last Fan VFD → Controller' : 'Panel → Controller'}</span><span class="stat-val">${pc} ft</span></div>
+          <div class="summary-stat"><span class="stat-label">Controller → Motor</span><span class="stat-val">${cm} ft</span></div>
+          <div class="summary-stat"><span class="stat-label">This Fan Conduit</span><span class="stat-val" style="font-weight:700">${pc + cm} ft</span></div>` : ''}
+        <div class="summary-stat"><span class="stat-label">Guy Wire Kit</span><span class="stat-val" style="${dt > 3 ? 'color:var(--warn)' : 'color:var(--success)'}">${dt > 3 ? '⚠️ Required' : '✅ Not Required'}</span></div>
+        ${mount === 'Truss' ? `<div class="summary-stat"><span class="stat-label">Angle Iron</span><span class="stat-val" style="${(parseFloat(document.getElementById('fanTrussSpan-' + id)?.value)||0) > 10 ? 'color:var(--warn)' : 'color:var(--success)'}">${(parseFloat(document.getElementById('fanTrussSpan-' + id)?.value)||0) > 10 ? '⚠️ Double (4 pcs)' : '✅ Standard (2 pcs)'}</span></div>` : ''}
+        ${val('fanNotes-' + id) ? `<div class="summary-stat"><span class="stat-label">Notes</span><span class="stat-val" style="text-align:right;font-size:13px;font-family:'Barlow',sans-serif;font-weight:500;max-width:60%">${esc(val('fanNotes-' + id))}</span></div>` : ''}
+      </div>
+    </div>`;
+  });
+
+  // Aerial equipment
+  const accessType = (document.querySelector('input[name="accessType"]:checked')?.value) || '';
+  const accessLabels = { grade: 'Grade-Level Door', ramp: 'Ramp Door', dock: 'Loading Dock Only', none: 'No Direct Access – Trailer Required' };
+  const maxCH = getMaxCeilingHeight();
+  const liftReco = getLiftRecommendation(maxCH);
+
+  // Downtube summary: "4× 1 ft, 1× 2 ft, 1× 3 ft"
+  const dtSummary = Object.entries(dtCounts)
+    .sort((a, b) => parseFloat(a[0]) - parseFloat(b[0]))
+    .map(([len, qty]) => `${qty}× ${len} ft`)
+    .join(', ') || 'Not checked';
+
+  // Render aggregated stats
+  const mountSummary = Object.entries(mounts).map(([k, v]) => `${v}× ${k}`).join(', ') || 'Not checked';
+  const statsHTML = `
+    <div class="summary-stat"><span class="stat-label">Total Fans</span><span class="stat-val">${fans.length}</span></div>
+    <div class="summary-stat"><span class="stat-label">Mounting Types</span><span class="stat-val" style="font-size:14px">${mountSummary}</span></div>
+    <div class="summary-stat"><span class="stat-label">Downtubes</span><span class="stat-val" style="font-size:13px;text-align:right">${dtSummary}</span></div>
+    <div class="summary-stat"><span class="stat-label">Guy Wire Kits Needed</span><span class="stat-val" style="${guyWireCount > 0 ? 'color:var(--warn)' : ''}">${guyWireCount > 0 ? '⚠️ ' : ''}${guyWireCount}</span></div>
+    <div class="summary-stat"><span class="stat-label">Double Angle Iron Fans</span><span class="stat-val" style="${doubleAngleCount > 0 ? 'color:var(--warn)' : ''}">${doubleAngleCount > 0 ? '⚠️ ' : ''}${doubleAngleCount}</span></div>
+    <div class="summary-stat"><span class="stat-label">Total Conduit Run (Turnkey)</span><span class="stat-val">${totalPCdist + totalCMdist} ft</span></div>
+    <div class="summary-stat"><span class="stat-label" style="font-size:11px;padding-left:12px">↳ Supply Runs (Panel/Fan→VFD)</span><span class="stat-val" style="font-size:13px">${totalPCdist} ft</span></div>
+    <div class="summary-stat"><span class="stat-label" style="font-size:11px;padding-left:12px">↳ Motor Runs (VFD→Motor)</span><span class="stat-val" style="font-size:13px">${totalCMdist} ft</span></div>
+    <div class="summary-stat"><span class="stat-label">Navigator Units</span><span class="stat-val">${navCount}</span></div>
+    <div class="summary-stat"><span class="stat-label">Navigator 120V Conduit Needed</span><span class="stat-val">${navConduitTotal} ft</span></div>
+    <div class="summary-stat"><span class="stat-label">Fans w/ FA Wire (Installers)</span><span class="stat-val">${faCount}</span></div>
+    <div class="summary-stat"><span class="stat-label">Total FA Wire Run</span><span class="stat-val">${faDistTotal} ft</span></div>
+    <div class="summary-stat"><span class="stat-label">Site Access Type</span><span class="stat-val" style="font-size:13px">${accessLabels[accessType] || 'Not checked'}</span></div>
+    <div class="summary-stat"><span class="stat-label">Recommended Lift</span><span class="stat-val" style="font-size:13px">${liftReco ? liftReco.title : '—'}</span></div>
+  `;
+  statsEl.innerHTML = statsHTML;
+
+  // Warnings
+  const warnHTML = warnings.length ? warnings.map(w => {
+    const cls = w.type === 'error' ? 'alert-danger' : w.type === 'warn' ? 'alert-warn' : 'alert-info';
+    const ico = w.type === 'error' ? '🚫' : w.type === 'warn' ? '⚠️' : '💡';
+    return `<div class="alert ${cls}" style="margin-bottom:6px"><span class="alert-icon">${ico}</span><div>${esc(w.msg)}</div></div>`;
+  }).join('') : '<div style="color:var(--text3);font-size:14px">No issues detected from entered data. Unchecked items remain unverified.</div>';
+  if (warningsEl) warningsEl.innerHTML = warnHTML;
+
+  // Breakdowns
+  if (breakdownsEl) breakdownsEl.innerHTML = `<div class="card"><div class="card-title">🌀 Per-Fan Breakdown</div>${breakdownHTML}</div>`;
+
+  // Aerial summary card
+  const aerialEl = document.getElementById('aerialSummaryContent');
+  if (aerialEl) {
+    const equip = [];
+    if (getEquipQty('scissor') > 0) equip.push(getEquipQty('scissor') + '× Scissor Lift');
+    if (getEquipQty('boom') > 0) equip.push(getEquipQty('boom') + '× Boom Lift');
+    if (getEquipQty('forklift') > 0) equip.push(getEquipQty('forklift') + '× Forklift');
+    if (getEquipQty('1man') > 0) equip.push(getEquipQty('1man') + '× Personnel Lift');
+    if (getEquipQty('telehandler') > 0) equip.push(getEquipQty('telehandler') + '× Telehandler');
+    aerialEl.innerHTML = `
+      <div class="summary-stat"><span class="stat-label">Site Access</span><span class="stat-val" style="font-size:13px">${accessLabels[accessType] || 'Not checked'}</span></div>
+      <div class="summary-stat"><span class="stat-label">Max Ceiling Height</span><span class="stat-val">${maxCH > 0 ? maxCH + ' ft' : '—'}</span></div>
+      <div class="summary-stat"><span class="stat-label">Primary Lift Needed</span><span class="stat-val" style="font-size:13px">${liftReco ? liftReco.title : '—'}</span></div>
+      <div class="summary-stat"><span class="stat-label">Additional Equipment</span><span class="stat-val" style="font-size:13px">${equip.length > 0 ? equip.join(', ') : 'None selected'}</span></div>
+      <div class="summary-stat"><span class="stat-label">Guy Wire Kits</span><span class="stat-val" style="${guyWireCount > 0 ? 'color:var(--warn)' : ''}">${guyWireCount > 0 ? '⚠️ ' : ''}${guyWireCount}</span></div>
+      <div class="summary-stat"><span class="stat-label">Double Angle Iron Fans</span><span class="stat-val" style="${doubleAngleCount > 0 ? 'color:var(--warn)' : ''}">${doubleAngleCount > 0 ? '⚠️ ' : ''}${doubleAngleCount}</span></div>
+    `;
+  }
+
+  renderAggregateBreakerSummary();
+}
+
+function updateJobSummary() {
+  const jsc = document.getElementById('jobSummaryContent');
+  const pm = document.getElementById('printMeta');
+  if (!jsc) return;
+  const name = val('jobName') || 'Not checked';
+  const street = val('addrStreet') || '';
+  const city = val('addrCity') || '';
+  const state = val('addrState') || '';
+  const zip = val('addrZip') || '';
+  const addr = [street, city, state, zip].filter(Boolean).join(', ') || 'Not checked';
+  const hours = val('opHours') || 'Not checked';
+  const sales = val('salesName') || 'Not checked';
+  jsc.innerHTML = `
+    <div class="summary-stat"><span class="stat-label">Project</span><span class="stat-val">${esc(name)}</span></div>
+    <div class="summary-stat"><span class="stat-label">Address</span><span class="stat-val" style="font-size:14px">${esc(addr)}</span></div>
+    <div class="summary-stat"><span class="stat-label">Operating Hours</span><span class="stat-val" style="font-size:14px">${esc(hours)}</span></div>
+    <div class="summary-stat"><span class="stat-label">After-Hours Required</span><span class="stat-val">${!afterHoursChecked ? 'Not checked' : afterHours ? '⚠️ Yes' : 'No'}</span></div>
+    <div class="summary-stat"><span class="stat-label">Sales Rep</span><span class="stat-val" style="font-size:14px">${esc(sales)}</span></div>
+  `;
+  // Update print meta
+  const d = new Date();
+  if (pm) pm.innerHTML = `Job: <strong>${esc(name)}</strong> &nbsp;|&nbsp; Address: <strong>${esc(addr)}</strong> &nbsp;|&nbsp; Rep: <strong>${esc(sales)}</strong> &nbsp;|&nbsp; Date: <strong>${d.toLocaleDateString()}</strong>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// COLLAPSIBLE
+// ═══════════════════════════════════════════════════════════
+function toggleCollapsible(id) {
+  const body = document.getElementById(id);
+  const caret = document.getElementById(id + '-caret');
+  if (!body) return;
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  if (caret) caret.classList.toggle('open', !isOpen);
+}
+
+// ═══════════════════════════════════════════════════════════
+// PRINT / EXPORT
+// ═══════════════════════════════════════════════════════════
+async function printProposal() {
+  try{updateSummary();updateJobSummary();
+    const doc=new window.jspdf.jsPDF({unit:'pt',format:'letter'}),clean=window.FGTPDF.clean;let y=48;
+    const text=(value,size=10)=>{doc.setFontSize(size);for(const line of doc.splitTextToSize(clean(value),540)){if(y>744){doc.addPage();y=48;}doc.text(line,36,y);y+=size+5;}};
+    text('Fan Guys - Site survey',20);text(val('jobName')||'Job not checked',14);text([val('addrStreet'),val('addrCity'),val('addrState'),val('addrZip')].filter(Boolean).join(', '));
+    for(const [title,id] of [['Job details','jobSummaryContent'],['Totals','summaryStats'],['Warnings','warningsList'],['Fan details','fanBreakdowns'],['Aerial equipment','aerialSummaryContent'],['Electrical load inventory','aggregateBreakerCard']]){
+      const node=document.getElementById(id);if(!node)continue;y+=12;text(title,14);
+      const rows=node.querySelectorAll('.summary-stat,.alert,.breaker-stat,.fan-breakdown-title');
+      if(rows.length)rows.forEach(row=>text(row.textContent.replace(/\s+/g,' ').trim()));else text(node.textContent.replace(/\s+/g,' ').trim());
+    }
+    text('Unchecked fields remain unverified. Load tallies do not approve circuit protection.',9);
+    await window.FGTPDF.deliver(doc,'FanGuys-site-survey.pdf');
+  }catch(e){alert('PDF failed: '+e.message);}
+}
+
+function exportJSON() {
+  updateSummary();
+  const data = {
+    exported: new Date().toISOString(),
+    job: {
+      name: val('jobName'), salesName: val('salesName'),
+      address: `${val('addrStreet')}, ${val('addrCity')}, ${val('addrState')} ${val('addrZip')}`,
+      opHours: val('opHours'), afterHours, afterHoursChecked, siteNotes: val('siteNotes')
+    },
+    fans: fans.map(f => {
+      const id = f.id;
+      const pid2 = val('fanModelSel-' + id);
+      const prod2 = GFY_PRODUCTS.find(p => p.id === pid2);
+      const dEl = document.getElementById('fanDia-' + id);
+      const diaLabel2 = dEl && dEl.selectedIndex > 0 ? dEl.options[dEl.selectedIndex].text : val('fanDia-' + id);
+      return {
+        id, location: val('fanLoc-' + id),
+        ceilingHeight: val('fanCH-' + id),
+        product: prod2 ? prod2.label : (pid2 || 'Not checked'),
+        diameter: diaLabel2,
+        downtube: val('fanDT-' + id),
+        control: getRadioVal('fanCtrl', id),
+        navOutletPresent: window['navOutlet_' + id],
+        navConduit: val('navConduit-' + id),
+        fireAlarm: getRadioVal('fanFA', id),
+        fapLocation: val('fanFAP-' + id), faDistance: val('fanFADist-' + id),
+        scope: getRadioVal('fanScope', id),
+        powerSource: getRadioVal('fanPwrSrc', id),
+        supplyRunFt: getRadioVal('fanPwrSrc', id) === 'lastfan' ? val('fanDC-' + id) : val('fanPC-' + id),
+        motorRunFt: getRadioVal('fanPwrSrc', id) === 'lastfan' ? val('fanDCM-' + id) : val('fanCM-' + id),
+        daisySource: val('fanDaisySrc-' + id),
+        voltage: val('fanVolt-' + id), breaker: val('fanBreaker-' + id),
+        obstructions: val('fanObs-' + id), notes: val('fanNotes-' + id)
+      };
+    })
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'fan-guys-survey-' + Date.now() + '.json';
+  a.click();
+}
+
+// ═══════════════════════════════════════════════════════════
+// AERIAL EQUIPMENT
+// ═══════════════════════════════════════════════════════════
+function onAccessChange() {
+  ['grade','ramp','dock','none'].forEach(t => {
+    const note = document.getElementById('access' + t.charAt(0).toUpperCase() + t.slice(1) + 'Note');
+    const opt = document.getElementById('access-opt-' + t);
+    if (note) note.classList.add('hidden');
+    if (opt) opt.classList.toggle('selected', false);
+  });
+  const checked = document.querySelector('input[name="accessType"]:checked');
+  if (checked) {
+    const t = checked.value;
+    const note = document.getElementById('access' + t.charAt(0).toUpperCase() + t.slice(1) + 'Note');
+    if (note) note.classList.remove('hidden');
+    const opt = document.getElementById('access-opt-' + t);
+    if (opt) opt.classList.add('selected');
+  }
+  updateAerialSummary();
+}
+// init radio styling for access type - moved to init block below
+
+function getMaxCeilingHeight() {
+  const manual = parseFloat(document.getElementById('manualMaxCH')?.value) || 0;
+  if (manual > 0) return manual;
+  let max = 0;
+  fans.forEach(f => {
+    const ch = parseFloat(document.getElementById('fanCH-' + f.id)?.value) || 0;
+    if (ch > max) max = ch;
+  });
+  return max;
+}
+
+function getLiftRecommendation(maxCH) {
+  if (maxCH === 0) return null;
+  // Scissor lifts: Genie 4047/4069, JLG 4069LE and similar reach 40 ft platform height
+  // Boom lifts needed above 40 ft ceiling height
+  if (maxCH <= 20) {
+    return {
+      cls: 'lift-primary',
+      icon: '✅',
+      title: 'Standard Scissor Lift',
+      detail: `Ceiling height ${maxCH} ft – a standard 19–26 ft scissor lift should reach comfortably. Confirm working height with rental company based on exact mounting point.`
+    };
+  } else if (maxCH <= 30) {
+    return {
+      cls: 'lift-primary',
+      icon: '✅',
+      title: 'Scissor Lift (30 ft class)',
+      detail: `Ceiling height ${maxCH} ft – a 26–32 ft platform scissor lift recommended (e.g. Genie GS-3232/3246, JLG 3246). Confirm aisle width and floor capacity for the machine.`
+    };
+  } else if (maxCH <= 40) {
+    return {
+      cls: 'lift-primary',
+      icon: '✅',
+      title: 'Scissor Lift (40 ft class)',
+      detail: `Ceiling height ${maxCH} ft – a 40 ft platform scissor lift can reach this height. Look at Genie GS-4047/4069, JLG 4069LE or similar. Confirm door clearance and floor load rating for a larger machine.`
+    };
+  } else if (maxCH <= 55) {
+    return {
+      cls: 'lift-warn',
+      icon: '⚠️',
+      title: 'Boom Lift Required',
+      detail: `Ceiling height ${maxCH} ft – exceeds scissor lift range. A 45–60 ft articulating or straight boom lift is required. Verify floor capacity, access door dimensions, and aisle clearance for boom footprint.`
+    };
+  } else {
+    return {
+      cls: 'lift-danger',
+      icon: '🚫',
+      title: 'Large Boom Lift / Special Equipment',
+      detail: `Ceiling height ${maxCH} ft – very high installation. 60 ft+ boom lift or specialized equipment required. Confirm structural loading, floor capacity, and equipment access plan with install crew BEFORE scheduling.`
+    };
+  }
+}
+
+function updateAerialSummary() {
+  const maxCH = getMaxCeilingHeight();
+  const calcEl = document.getElementById('calcMaxCH');
+  if (calcEl) calcEl.textContent = maxCH > 0 ? maxCH + ' ft' : '—';
+
+  const recoEl = document.getElementById('liftRecommendation');
+  if (recoEl) {
+    const reco = getLiftRecommendation(maxCH);
+    if (reco) {
+      recoEl.innerHTML = `<div class="lift-reco ${reco.cls}">
+        <div class="lift-reco-icon">${reco.icon}</div>
+        <div><div class="lift-reco-title">${reco.title}</div><div class="lift-reco-sub">${reco.detail}</div></div>
+      </div>`;
+    } else {
+      recoEl.innerHTML = `<div style="color:var(--text3);font-size:14px">Add fan ceiling heights to get a recommendation.</div>`;
+    }
+  }
+
+  // Hardware rules
+  updateHardwareRules();
+  updateSummary();
+}
+
+// ═══════════════════════════════════════════════════════════
+// HARDWARE RULES (Guy Wire, Double Angle Iron)
+// ═══════════════════════════════════════════════════════════
+function checkFanHardware(id) {
+  const dt = parseFloat(document.getElementById('fanDT-' + id)?.value) || 1;
+  const mount = document.getElementById('fanMount-' + id)?.value;
+  const trussSpan = parseFloat(document.getElementById('fanTrussSpan-' + id)?.value) || 0;
+  const container = document.getElementById('fanHardwareAlerts-' + id);
+  const trussField = document.getElementById('fanTrussSpanField-' + id);
+
+  // Show truss span field only for Truss mounting
+  if (trussField) trussField.classList.toggle('hidden', mount !== 'Truss');
+
+  if (!container) return;
+  let html = '';
+
+  if (dt > 3) {
+    html += `<div class="hw-rule hw-warn" style="margin-top:8px">
+      <div class="hw-rule-icon">🔩</div>
+      <div><div class="hw-rule-title">Guy Wire Kit Required</div>
+      Downtube is ${dt} ft (over 3 ft threshold). A guy wire stabilization kit must be included in the quote and installation plan.</div>
+    </div>`;
+  }
+
+  if (mount === 'Truss') {
+    if (trussSpan > 10) {
+      html += `<div class="hw-rule hw-warn" style="margin-top:8px">
+        <div class="hw-rule-icon">🏗️</div>
+        <div><div class="hw-rule-title">Double Angle Iron Required</div>
+        Truss span is ${trussSpan} ft (over 10 ft). The 3" angle iron must be doubled up — <strong>4 pieces of steel per fan</strong> instead of standard 2. Include in material and labor quote.</div>
+      </div>`;
+    } else if (trussSpan > 0) {
+      html += `<div class="hw-rule hw-info" style="margin-top:8px">
+        <div class="hw-rule-icon">✅</div>
+        <div><div class="hw-rule-title">Standard Angle Iron OK</div>
+        Truss span ${trussSpan} ft is within 10 ft limit. Standard 2-piece 3" angle iron applies.</div>
+      </div>`;
+    } else {
+      html += `<div class="hw-rule hw-info" style="margin-top:8px">
+        <div class="hw-rule-icon">📐</div>
+        <div><div class="hw-rule-title">Enter Truss Span</div>
+        Enter the truss span above to determine if double angle iron is required (&gt;10 ft span = 4 pieces).</div>
+      </div>`;
+    }
+  }
+
+  container.innerHTML = html;
+  updateHardwareRules();
+  updateSummary();
+}
+
+function updateHardwareRules() {
+  const container = document.getElementById('hardwareRulesContent');
+  if (!container) return;
+  let rules = [];
+  let guyWireCount = 0;
+  let doubleAngleCount = 0;
+
+  fans.forEach(f => {
+    const id = f.id;
+    const dt = parseFloat(document.getElementById('fanDT-' + id)?.value) || 1;
+    const mount = document.getElementById('fanMount-' + id)?.value;
+    const trussSpan = parseFloat(document.getElementById('fanTrussSpan-' + id)?.value) || 0;
+    const loc = document.getElementById('fanLoc-' + id)?.value || 'Fan #' + id;
+
+    if (dt > 3) guyWireCount++;
+    if (mount === 'Truss' && trussSpan > 10) doubleAngleCount++;
+  });
+
+  let html = '';
+  if (guyWireCount > 0) {
+    html += `<div class="hw-rule hw-warn" style="margin-bottom:8px">
+      <div class="hw-rule-icon">🔩</div>
+      <div><div class="hw-rule-title">Guy Wire Kits Needed: ${guyWireCount} fan${guyWireCount > 1 ? 's' : ''}</div>
+      Downtubes over 3 ft require guy wire stabilization kits. Ensure these are included in the quote.</div>
+    </div>`;
+  }
+  if (doubleAngleCount > 0) {
+    html += `<div class="hw-rule hw-warn" style="margin-bottom:8px">
+      <div class="hw-rule-icon">🏗️</div>
+      <div><div class="hw-rule-title">Double Angle Iron: ${doubleAngleCount} fan${doubleAngleCount > 1 ? 's' : ''}</div>
+      Truss spans over 10 ft require 4 pieces of 3" angle iron per fan (instead of standard 2). Update material quantities.</div>
+    </div>`;
+  }
+  if (guyWireCount === 0 && doubleAngleCount === 0 && fans.length > 0) {
+    html = '<div class="alert alert-success"><span class="alert-icon">✅</span><span>No special hardware requirements flagged based on current fan data.</span></div>';
+  } else if (fans.length === 0) {
+    html = '<div style="color:var(--text3);font-size:14px">Add fans to see automatic hardware requirement alerts.</div>';
+  }
+  container.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════
+// PHOTO CHECKLIST
+// ═══════════════════════════════════════════════════════════
+let panelRoomStatus = 'unchecked'; // 'unchecked' | 'yes' | 'no'
+const equipQtys = { scissor: 1, boom: 1, forklift: 1, '1man': 1, telehandler: 1 };
+
+function toggleEquip(id) {
+  const btn = document.getElementById(id);
+  if (!btn) return;
+  btn.classList.toggle('active');
+  // derive key from id: "eq-scissor" → "scissor", "eq-1man" → "1man"
+  const key = id.replace('eq-', '');
+  const qtyWrap = document.getElementById(id + '-qty-wrap');
+  if (qtyWrap) qtyWrap.classList.toggle('visible', btn.classList.contains('active'));
+  updateAerialSummary();
+}
+
+function changeQty(key, delta) {
+  const current = equipQtys[key] || 1;
+  equipQtys[key] = Math.max(1, current + delta);
+  const el = document.getElementById('qty-' + key);
+  if (el) el.textContent = equipQtys[key];
+  updateAerialSummary();
+}
+
+function isEquipActive(id) {
+  return document.getElementById(id)?.classList.contains('active') || false;
+}
+
+function getEquipQty(key) {
+  return isEquipActive('eq-' + key) ? (equipQtys[key] || 1) : 0;
+}
+
+function togglePanelRoom() {
+  const btn = document.getElementById('panelRoomBtn');
+  if (!btn) return;
+  if (panelRoomStatus === 'unchecked') { panelRoomStatus = 'yes'; btn.textContent = 'Yes – Room Available'; btn.className = 'toggle-btn on btn-sm'; }
+  else if (panelRoomStatus === 'yes') { panelRoomStatus = 'no'; btn.textContent = 'No – Panel Full'; btn.className = 'toggle-btn off btn-sm'; }
+  else { panelRoomStatus = 'unchecked'; btn.textContent = 'Not Checked'; btn.className = 'toggle-btn btn-sm'; }
+}
+
+function updateFanPhotoList() {
+  const container = document.getElementById('fanPhotoList');
+
+  // Show electrical panel photos only if any fan is Turnkey
+  const hasTurnkey = fans.some(f => getRadioVal('fanScope', f.id) === 'turnkey');
+  const elecCard = document.getElementById('photo-elec-card');
+  if (elecCard) elecCard.classList.toggle('hidden', !hasTurnkey);
+
+  // Update inline progress on all fan cards
+  fans.forEach(f => updateInlinePhotoProgress(f.id));
+
+  if (!container) return;
+  if (fans.length === 0) {
+    container.innerHTML = '<div style="color:var(--text3);font-size:14px;padding:8px 0">Photo checklists are embedded in each fan card. Add fans to get started.</div>';
+    return;
+  }
+  // Show a summary of per-fan inline photo completion in the Photos tab
+  let html = '';
+  fans.forEach(f => {
+    const id = f.id;
+    const loc = document.getElementById('fanLoc-' + id)?.value || 'Fan #' + id;
+    const all = document.querySelectorAll(`.fan-photo-cb-${id}`).length;
+    const done = document.querySelectorAll(`.fan-photo-cb-${id}:checked`).length;
+    const pct = all > 0 ? Math.round(done / all * 100) : 0;
+    html += `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div style="flex:1;font-size:14px;font-weight:500">🌀 Fan #${id} – ${esc(loc)}</div>
+      <div style="font-size:13px;color:${done===all&&all>0?'var(--success)':'var(--text3)'};">${done}/${all}</div>
+      <div style="width:80px;height:8px;background:var(--border);border-radius:4px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${done===all&&all>0?'var(--success)':'var(--primary-light)'};border-radius:4px;transition:width 0.3s"></div>
+      </div>
+    </div>`;
+  });
+  container.innerHTML = html || '<div style="color:var(--text3);font-size:14px">No fans added yet.</div>';
+  updatePhotoProgress();
+}
+
+function updateInlinePhotoProgress(id) {
+  const all = document.querySelectorAll(`.fan-photo-cb-${id}`);
+  const checked = document.querySelectorAll(`.fan-photo-cb-${id}:checked`);
+  const el = document.getElementById('fanPhotoProgress-' + id);
+  if (el) {
+    const done = checked.length, total = all.length;
+    el.textContent = done === total && total > 0 ? '✅ All photos checked' : `${done}/${total} photos checked`;
+    el.style.color = done === total && total > 0 ? 'var(--success)' : 'var(--text3)';
+  }
+}
+
+// Call when obstruction textarea changes to show/hide the obstruction photo item
+function onObstructionInput(id) {
+  const txt = document.getElementById('fanObs-' + id);
+  const photoItem = document.getElementById('fanPhotoObstacle-' + id);
+  if (txt && photoItem) {
+    const hasObs = txt.value.trim().length > 0;
+    photoItem.classList.toggle('hidden', !hasObs);
+    updateInlinePhotoProgress(id);
+    updatePhotoProgress();
+  }
+  updateSummary();
+}
+
+function updatePhotoProgress() {
+  const allCbs = document.querySelectorAll('.photo-cb');
+  const checkedCbs = document.querySelectorAll('.photo-cb:checked');
+  const total = allCbs.length, done = checkedCbs.length;
+  const bar = document.getElementById('photoProgressBar');
+  const lbl = document.getElementById('photoProgressLabel');
+  const msg = document.getElementById('photoProgressMsg');
+  if (bar) bar.style.width = total > 0 ? (done / total * 100) + '%' : '0%';
+  if (lbl) lbl.textContent = `${done} / ${total} checked`;
+  if (msg) {
+    if (total === 0) msg.textContent = 'Add fans to see all checklist items.';
+    else if (done === total) { msg.textContent = '✅ All photos accounted for!'; msg.style.color = 'var(--success)'; }
+    else { msg.textContent = `${total - done} photo${total - done > 1 ? 's' : ''} remaining.`; msg.style.color = 'var(--text3)'; }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+
+function val(id) {
+  const el = document.getElementById(id);
+  return el ? el.value : '';
+}
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function ctrlLabel(v) {
+  return { vfd: 'Directly from VFD', keypad: 'Wired Keypad', navigator: 'Vivid Air Navigator (BACnet)' }[v] || 'Not checked';
+}
+function faLabel(v) {
+  return { installer: 'Installers run wire', customer: 'Customer responsible' }[v] || 'Not checked';
+}
+function scopeLabel(v) {
+  return { turnkey: 'Turnkey (Full Power)', mechonly: 'Mechanical (Hang Only)', mechconn: 'Mechanical + Connections' }[v] || 'Not checked';
+}
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', function() {
+  // Set date
+  const dateEl = document.getElementById('currentDate');
+  if (dateEl) dateEl.textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  // Wire up access type radio styling
+  document.querySelectorAll('input[name="accessType"]').forEach(inp => {
+    inp.addEventListener('change', () => {
+      document.querySelectorAll('input[name="accessType"]').forEach(i => {
+        const opt = i.closest('.radio-option');
+        if (opt) opt.classList.toggle('selected', i.checked);
+      });
+    });
+  });
+
+  // Safe init
+  try { updateAerialSummary(); } catch(e) { console.warn('aerial init', e); }
+  try { updatePhotoProgress(); } catch(e) { console.warn('photo init', e); }
+});
+</script>
+<script>
+// ── Auto-save: keeps the survey on this phone so a reload or closed tab never wipes it ──
+(function() {
+  var KEY = 'fg_sitesurvey_autosave_v1';
+  var restoring = false, timer = null;
+  function fields() { return Array.prototype.slice.call(document.querySelectorAll('input, select, textarea')); }
+  function snapshot() {
+    var vals = {}, radios = {}, noId = [];
+    fields().forEach(function(el) {
+      if (el.type === 'file' || el.type === 'button' || el.type === 'submit') return;
+      if (el.type === 'radio') { if (el.checked && el.name) radios[el.name] = el.value; return; }
+      var v = (el.type === 'checkbox') ? el.checked : el.value;
+      if (el.id) vals[el.id] = v; else noId.push(v);
+    });
+    var nav = {};
+    fans.forEach(function(f) { nav[f.id] = !!window['navOutlet_' + f.id]; });
+    var equip = Array.prototype.slice.call(document.querySelectorAll('.equip-chip.active')).map(function(b) { return b.id; });
+    return { v: 1, fanIds: fans.map(function(f) { return f.id; }), fanCounter: fanCounter, afterHours: afterHours, afterHoursChecked: afterHoursChecked,
+             nav: nav, equip: equip, equipQtys: equipQtys, panelRoomStatus: panelRoomStatus,
+             savedFanNames: savedFanNames, vals: vals, radios: radios, noId: noId };
+  }
+  function writeNow() { if (restoring) return; try { FGTStore.setItem(KEY, JSON.stringify(snapshot())); } catch (e) {} }
+  function save() { if (restoring) return; clearTimeout(timer); timer = setTimeout(writeNow, 400); }
+  function applyFields(d, fire) {
+    var i = 0;
+    fields().forEach(function(el) {
+      if (el.type === 'file' || el.type === 'button' || el.type === 'submit') return;
+      if (el.type === 'radio') {
+        if (el.name && d.radios[el.name] === el.value && !el.checked) {
+          el.checked = true; if (fire) el.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        return;
+      }
+      var has = el.id ? (el.id in d.vals) : (i < d.noId.length);
+      var v = el.id ? d.vals[el.id] : d.noId[i];
+      if (!el.id) i++;
+      if (!has) return;
+      if (el.type === 'checkbox') { if (el.checked !== !!v) { el.checked = !!v; if (fire) el.dispatchEvent(new Event('change', { bubbles: true })); } }
+      else if (el.value !== v) {
+        el.value = v;
+        if (fire) { el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); }
+      }
+    });
+  }
+  function restore() {
+    var d; try { d = JSON.parse(FGTStore.getItem(KEY)); } catch (e) { return; }
+    if (!d || !d.vals) return;
+    restoring = true;
+    try {
+      (d.fanIds || []).forEach(function(id) { fanCounter = id - 1; addFan(); });
+      fanCounter = d.fanCounter || fanCounter;
+      // Pass 1 sets values and fires the app's own handlers (fills dependent dropdowns);
+      // pass 2 sets them again so dependent fields keep their saved choice.
+      applyFields(d, true); applyFields(d, false);
+      afterHours=!!d.afterHours;afterHoursChecked=d.afterHoursChecked===true||d.afterHours===true;document.getElementById('afterBtn').textContent=!afterHoursChecked?'Not checked':afterHours?'Yes':'No';document.getElementById('afterHoursNote').classList.toggle('hidden',!afterHours);
+      Object.keys(d.nav || {}).forEach(function(id) { if (!!d.nav[id] !== !!window['navOutlet_' + id]) toggleNavOutlet(+id); });
+      Array.prototype.slice.call(document.querySelectorAll('.equip-chip')).forEach(function(b) {
+        if ((d.equip || []).indexOf(b.id) >= 0 !== b.classList.contains('active')) toggleEquip(b.id);
+      });
+      Object.keys(d.equipQtys || {}).forEach(function(k) {
+        equipQtys[k] = d.equipQtys[k];
+        var el = document.getElementById('qty-' + k); if (el) el.textContent = equipQtys[k];
+      });
+      for (var n = 0; n < 3 && panelRoomStatus !== (d.panelRoomStatus || 'unchecked'); n++) togglePanelRoom();
+      Object.assign(savedFanNames, d.savedFanNames || {});
+      try { updateSummary(); updateAerialSummary(); updatePhotoProgress(); } catch (e) {}
+    } finally { restoring = false; }
+    setTimeout(function() { window.scrollTo(0, 0); }, 120);
+  }
+  window.startNewSurvey = function() {
+    if (!confirm('Start a new survey? This clears everything on this phone.')) return;
+    try { FGTStore.removeItem(KEY); } catch (e) {}
+    restoring = true;
+    location.reload();
+  };
+  document.addEventListener('DOMContentLoaded', function() {
+    try { restore(); } catch (e) { restoring = false; console.warn('autosave restore failed', e); }
+    document.addEventListener('input', save, true);
+    document.addEventListener('change', save, true);
+    document.addEventListener('click', save, true);
+    window.addEventListener('pagehide', writeNow);
+    document.addEventListener('visibilitychange', function() { if (document.hidden) writeNow(); });
+  });
+})();
+</script>
+</body>
+</html>

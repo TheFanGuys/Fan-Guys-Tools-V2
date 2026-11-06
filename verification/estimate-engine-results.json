@@ -1,0 +1,14 @@
+{
+  "passed": 9,
+  "tests": [
+    "Correct margin/markup and complete single-fan cost basis",
+    "Partial rate table flags exactly the selected missing model",
+    "Legacy zero requires review; deliberate reviewed zero is accepted",
+    "Explicit zero override is preserved in the total",
+    "Custom fan missing labor blocks output",
+    "Custom fan zero labor is an explicit valid value",
+    "Mixed scope fan counts and schedules are finite",
+    "Custom names cannot break attribute or summary HTML",
+    "Override snapshot restores after a full page-engine reconstruction"
+  ]
+}

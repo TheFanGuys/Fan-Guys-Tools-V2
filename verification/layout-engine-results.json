@@ -1,0 +1,28 @@
+{
+  "passed": 23,
+  "tests": [
+    "Fan placement triggers persistence without opening an edit sheet",
+    "Undo/redo of fan placement restores counts and numbering",
+    "Tap-junction history restores both junctions and branch connections",
+    "Column grid undo restores grid metadata as well as columns",
+    "Wall chain undo restores its pending endpoint",
+    "Rooms need two corners and preserve their label",
+    "Racking keeps positive width and height regardless of corner order",
+    "FA connections reject self-connections and duplicates",
+    "Cable takeoff follows drawn bends, not just endpoint distance",
+    "Routing avoids an intervening rack when a clear detour exists",
+    "Hidden fans, walls, columns, devices and wiring cannot be selected",
+    "Hidden objects are omitted from SVG output and reappear when enabled",
+    "Visibility and view toggles survive snapshot reload",
+    "Export projection fits negative-coordinate plans into the canvas",
+    "Phone Fit puts plan boundaries between header and bottom controls",
+    "Two-finger pinch preserves anchor and scale is bounded",
+    "Large column count is rejected without changing geometry",
+    "Wiring taps remain attached when a trunk endpoint moves",
+    "Deleting a trunk removes dependent junctions and branches; undo restores them",
+    "Plan rotation includes junctions and preserves geometry",
+    "Adding a second finger commits the active drag undo checkpoint",
+    "Touch cancellation commits the drag and clears gesture state",
+    "Deleting a photo preserves bytes needed by Undo"
+  ]
+}

@@ -1,0 +1,4 @@
+(function(){
+ window.FGTPDF={clean:s=>String(s==null?'':s).replace(/[–—]/g,'-').replace(/[′’]/g,"'").replace(/[“”]/g,'"').replace(/[^\x20-\x7E\n]/g,''),
+ async deliver(doc,name){const blob=doc.output('blob'),file=new File([blob],name,{type:'application/pdf'});if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file]});return;}catch(e){if(e.name==='AbortError')return;}}const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;if(window.fgtLastPdfURL)URL.revokeObjectURL(window.fgtLastPdfURL);window.fgtLastPdfURL=url;let box=document.getElementById('fgtPdfReady');if(!box){box=document.createElement('div');box.id='fgtPdfReady';document.body.appendChild(box);}a.textContent='Download PDF';box.replaceChildren(document.createTextNode('Your PDF is ready. '),a);}};
+})();

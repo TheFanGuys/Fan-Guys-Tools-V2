@@ -1,0 +1,13 @@
+{
+  "passed": 8,
+  "tests": [
+    "After-hours answer starts unknown and cycles yes/no/unknown",
+    "Downtube warning no longer recommends a longer tube",
+    "Unknown height does not create a floor-clearance pass",
+    "Motor reference amps are not extrapolated to unverified supplies",
+    "Breaker approval is never inferred from FLA alone",
+    "Unset power source is excluded rather than assumed to be panel-fed",
+    "Explicit panel and matching supply-side chains tally reference loads",
+    "Circuit checking does not silently change a selected power source"
+  ]
+}

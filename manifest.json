@@ -1,0 +1,25 @@
+{
+  "name": "Fan Guys Tools V2",
+  "short_name": "Tools V2",
+  "description": "Site survey, estimate, layout, materials and Tech Pro in one app",
+  "id": "/Fan-Guys-Tools-V2/",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#111715",
+  "theme_color": "#111715",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
