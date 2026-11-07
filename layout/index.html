@@ -216,6 +216,12 @@ textarea.inp{height:84px; padding:10px 12px; resize:vertical; line-height:1.35; 
 #objectLayers .layout-layer{display:flex;align-items:center;gap:12px;min-height:44px;
   border-bottom:1px solid var(--line);font-size:14px;font-weight:600;}
 #objectLayers input{accent-color:var(--amber);width:19px;height:19px;}
+.start-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:15px 0 12px;}
+.start-option{min-height:104px;padding:14px;text-align:left;border:1px solid var(--line);border-radius:13px;
+  background:var(--panel2);color:var(--text);font:inherit;display:flex;flex-direction:column;gap:7px;}
+.start-option:active{border-color:var(--amber);background:rgba(255,122,26,.13);}
+.start-option b{font-size:14px;line-height:1.15;}.start-option span{font-size:12px;line-height:1.35;color:var(--muted);}
+.start-step{color:var(--amber);font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;}
 @media(min-width:700px){
   #dock{left:18px;transform:none;width:340px;bottom:18px;}
   #ctx{left:18px;transform:none;width:min(540px,calc(100% - 36px));bottom:83px;}
@@ -401,6 +407,20 @@ textarea.inp{height:84px; padding:10px 12px; resize:vertical; line-height:1.35; 
 </div>
 
 <!-- Building shell (exterior) sheet -->
+<div class="scrim" id="startScrim"></div>
+<div class="sheet" id="startSheet">
+  <div class="grab"></div>
+  <div class="start-step">Step 1 · Building exterior</div>
+  <h3>How do you want to start?</h3>
+  <p class="hint">Create the outside boundary first. Then add columns, racking, fans, power and controls inside it. You can change the shell later.</p>
+  <div class="start-options">
+    <button class="start-option" id="startSize"><b>Enter dimensions</b><span>Known width and length in feet.</span></button>
+    <button class="start-option" id="startAddress"><b>Address or location</b><span>Find a mapped outline; confirm its scale.</span></button>
+    <button class="start-option" id="startPlan"><b>Import floor plan</b><span>PDF or photo, then calibrate a distance.</span></button>
+    <button class="start-option" id="startTrace"><b>Draw the outline</b><span>Tap corners or type wall lengths.</span></button>
+  </div>
+  <button class="btn" id="startSkip">I'll do this later</button>
+</div>
 <div class="scrim" id="shellScrim"></div>
 <div class="sheet" id="shellSheet">
   <div class="grab"></div>
@@ -1786,6 +1806,21 @@ document.getElementById("mColOff").addEventListener("click",()=>{showColOffsets=
 document.getElementById("layersDone").addEventListener("click",()=>closeSheet("layers"));
 document.getElementById("mRotate").addEventListener("click",()=>{closeSheet("menu");openRotate();});
 function enterShellEdit(){shellEditMode=true;sel=null;setTool("pan");document.getElementById("shellBar").classList.add("show");openSheet("shell");render();}
+function emptyPlan(){return !S.walls.length&&!S.bg&&!S.fans.length&&!S.columns.length&&!S.racking.length&&!S.rooms.length&&!S.devices.length;}
+function openStartGuide(){if(!VIEWONLY&&emptyPlan())openSheet("start");}
+function startExterior(mode){
+  closeSheet("start");
+  if(mode==="plan"){document.getElementById("photoInput").click();return;}
+  enterShellEdit();closeSheet("shell");
+  if(mode==="size")openBuilding();
+  if(mode==="address"){setAddrStatus("");openSheet("addr");}
+  if(mode==="trace"){orthoWall=true;setTool("wall");showBanner("Tap the exterior corners, or type feet and a direction. Close the outline when done.");}
+}
+document.getElementById("startSize").addEventListener("click",()=>startExterior("size"));
+document.getElementById("startAddress").addEventListener("click",()=>startExterior("address"));
+document.getElementById("startPlan").addEventListener("click",()=>startExterior("plan"));
+document.getElementById("startTrace").addEventListener("click",()=>startExterior("trace"));
+document.getElementById("startSkip").addEventListener("click",()=>closeSheet("start"));
 function exitShellEdit(){shellEditMode=false;closeSheet("shell");document.getElementById("shellBar").classList.remove("show");sel=null;setTool("pan");saveAll();refreshCtx();render();}
 document.getElementById("shellTools").addEventListener("click",()=>openSheet("shell"));
 document.getElementById("shellSave").addEventListener("click",exitShellEdit);
@@ -1986,7 +2021,7 @@ function openSheet(n){
   if(n==='layers'){updateLayersUI();updateViewLabels();}
 }
 function closeSheet(n){document.getElementById(n+'Scrim').classList.remove('show');const el=document.getElementById(n+'Sheet');el.classList.remove('show');el.inert=true;el.setAttribute('aria-hidden','true');}
-["fan","jobs","menu","brand","add","building","addr","cgrid","rack","layers","shell"].forEach(n=>document.getElementById(n+"Scrim").addEventListener("click",()=>closeSheet(n)));
+["fan","jobs","menu","brand","add","building","addr","cgrid","rack","layers","shell","start"].forEach(n=>document.getElementById(n+"Scrim").addEventListener("click",()=>closeSheet(n)));
 let tipsOff=false; try{tipsOff=FGTStore.getItem("lp_tips_off")==="1";}catch(e){}
 function refreshTipsBtn(){const t=document.getElementById("mTips");if(t)t.textContent=tipsOff?"Tips: off":"Tips: on";}
 function showBanner(t){
@@ -2265,7 +2300,7 @@ document.getElementById("newJob").addEventListener("click",()=>{
     if(!nm)return;
     saveAll();S=blankState();S.job=nm;bgImg=null;undoStack=[];redoStack=[];sel=null;refreshUndo();
     view={x:innerWidth/2,y:innerHeight/2,scale:1};document.getElementById("jobName").textContent=nm;
-    updatePhotoMenu();render();updateScope();refreshCtx();saveAll();closeSheet("jobs");enterShellEdit();});
+    updatePhotoMenu();render();updateScope();refreshCtx();saveAll();closeSheet("jobs");openStartGuide();});
 });
 
 /* ---------- menu ---------- */
@@ -2867,7 +2902,8 @@ function boot(){
   else{S.job=(FGTStore.current()||{}).name||"Untitled plan";document.getElementById("jobName").textContent=S.job;view={x:innerWidth/2,y:innerHeight/2,scale:1};render();updateScope();}
   lastSavedJSON=st.current&&st.jobs[st.current]?JSON.stringify(snapshot()):'';persistenceReady=true;
   refreshFanSwatch();refreshCtx();
-  try{ if(!FGTStore.getItem("lp_wizard_seen")) openWizard(); }catch(e){}
+  if(emptyPlan())requestAnimationFrame(openStartGuide);
+  else try{ if(!FGTStore.getItem("lp_wizard_seen")) openWizard(); }catch(e){}
 }
 document.getElementById('wizardSheet').inert=true;
 document.querySelectorAll('.sheet').forEach(el=>{el.inert=true;el.setAttribute('aria-hidden','true');el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');const h=el.querySelector('h3');if(h){if(!h.id)h.id=el.id+'Heading';el.setAttribute('aria-labelledby',h.id);const close=document.createElement('button');close.className='layout-close';close.type='button';close.textContent='×';close.setAttribute('aria-label','Close '+h.textContent);close.onclick=()=>closeSheet(el.id.replace('Sheet',''));h.appendChild(close);}});
