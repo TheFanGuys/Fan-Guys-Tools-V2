@@ -177,6 +177,51 @@ textarea.inp{height:84px; padding:10px 12px; resize:vertical; line-height:1.35; 
   #printArea table{width:100%; border-collapse:collapse; margin-top:8px; font-size:11px; table-layout:fixed; word-wrap:break-word;}
   #printArea td,#printArea th{border:1px solid #ccc; padding:5px 6px; text-align:left; vertical-align:top;}
 }
+/* Field workspace: the drawing stays dominant while actions stay thumb-sized. */
+#dock{left:50%;right:auto;width:min(470px,calc(100% - 20px));transform:translateX(-50%);
+  bottom:calc(env(safe-area-inset-bottom) + 9px);padding:5px;gap:3px;
+  border:1px solid var(--line);border-radius:18px;background:var(--panel);
+  box-shadow:0 12px 38px rgba(0,0,0,.32);}
+.tool{height:49px;min-width:0;border:0;border-radius:13px;background:transparent;gap:1px;
+  font-size:10px;letter-spacing:.01em;}
+.tool svg{width:20px;height:20px;}
+.tool.active{background:var(--amber);box-shadow:0 3px 12px rgba(255,122,26,.18);}
+#ctx{left:50%;right:auto;width:min(560px,calc(100% - 20px));transform:translateX(-50%);
+  bottom:calc(env(safe-area-inset-bottom) + 69px);padding:0;}
+#ctxInner{min-height:54px;padding:5px;gap:5px;border-radius:15px;
+  background:var(--panel);box-shadow:0 8px 26px rgba(0,0,0,.25);
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+#ctxInner::-webkit-scrollbar{display:none;}
+#ctxInner>div[style*="flex:1"]{min-width:120px;font-size:12px!important;line-height:1.2;}
+.cbtn{flex:0 0 auto;height:42px;min-width:62px;padding:0 11px;border-radius:10px;font-size:12px;white-space:nowrap;}
+.cbrand{min-width:46px;}.cbrand .sw{width:29px;height:29px;}
+#scope{left:50%;right:auto;width:min(460px,calc(100% - 24px));transform:translateX(-50%);
+  bottom:calc(env(safe-area-inset-bottom) + 133px);padding:0;}
+#scopeCard{padding:7px 11px;border-radius:11px;background:var(--panel);box-shadow:0 5px 18px rgba(0,0,0,.18);}
+#scopeHead{min-height:27px;font-size:12px;}
+.sheet{left:50%;right:auto;width:min(600px,100%);transform:translate(-50%,100%);
+  max-height:min(82dvh,750px);padding:8px 18px calc(env(safe-area-inset-bottom) + 18px);
+  border:1px solid var(--line);box-shadow:0 -18px 50px rgba(0,0,0,.25);overscroll-behavior:contain;}
+.sheet.show{transform:translate(-50%,0);}
+.sheet h3{font-size:19px;letter-spacing:-.025em;margin:0 0 10px;}
+.sheet .mhead{margin:18px 0 8px;color:var(--muted);}
+.sheet .field{margin-bottom:10px;}
+.sheet .btn{height:45px;font-size:14px;border-radius:10px;}
+.sheet .row{gap:8px;}
+.sheet .seg{gap:7px;}
+.sheet .seg button{flex:0 0 auto;min-width:0;height:43px;padding:0 13px;border-radius:10px;font-size:12px;}
+#addFillChoices,#addPoiChoices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));}
+#addFillChoices button,#addPoiChoices button{width:100%;text-align:left;}
+#addFillChoices button.on{border-color:var(--amber);box-shadow:inset 3px 0 var(--amber);}
+#objectLayers .layout-layer{display:flex;align-items:center;gap:12px;min-height:44px;
+  border-bottom:1px solid var(--line);font-size:14px;font-weight:600;}
+#objectLayers input{accent-color:var(--amber);width:19px;height:19px;}
+@media(min-width:700px){
+  #dock{left:18px;transform:none;width:340px;bottom:18px;}
+  #ctx{left:18px;transform:none;width:min(540px,calc(100% - 36px));bottom:83px;}
+  #scope{left:auto;right:18px;transform:none;width:300px;bottom:18px;}
+  .sheet{bottom:18px;border-radius:18px;}
+}
 </style>
 <link rel="stylesheet" href="../shared/workspace.css">
 <script src="../shared/workspace.js" defer></script>
@@ -397,7 +442,11 @@ textarea.inp{height:84px; padding:10px 12px; resize:vertical; line-height:1.35; 
     <button class="btn" id="addColumn">Column</button>
     <button class="btn" id="addColGrid">Column grid…</button>
   </div>
-  <div class="field"><button class="btn" id="addRack">Racking &amp; fills</button></div>
+  <div class="mhead">Areas &amp; markers</div>
+  <p class="hint">Choose an area, then draw two opposite corners.</p>
+  <div class="field"><label>Area fill</label><div class="seg" id="addFillChoices"></div></div>
+  <div class="field"><button class="btn" id="addRack">Draw selected area</button></div>
+  <div class="field"><label>Building markers</label><div class="seg" id="addPoiChoices"></div></div>
 </div>
 
 <!-- Column grid sheet -->
@@ -525,7 +574,7 @@ let editId=null;           // fan currently in edit sheet
 let sel=null;              // {kind:'fan'|'room'|'wall', id}
 let bgMode=false, calibration=null;
 let VIEWONLY=false;        // shared-link read-only mode
-const LAYER_NAMES={fans:'Fans',walls:'Walls',rooms:'Rooms',columns:'Columns',racking:'Racking / fills',devices:'Panels / controllers',wiring:'FA / comm wiring',background:'Background plan'};
+const LAYER_NAMES={fans:'Fans',walls:'Walls',rooms:'Rooms',columns:'Columns',racking:'Areas & racking',devices:'Panels / controllers',poi:'Building markers',wiring:'FA / comm wiring',background:'Background plan'};
 let layerVisible=Object.fromEntries(Object.keys(LAYER_NAMES).map(k=>[k,true]));
 function visibleItems(k){return layerVisible[k]===false?[]:(S[k]||[]);}
 function updateLayersUI(){const host=document.getElementById('objectLayers');if(!host)return;host.innerHTML='';Object.entries(LAYER_NAMES).forEach(([key,name])=>{const label=document.createElement('label');label.className='layout-layer';const input=document.createElement('input');input.type='checkbox';input.checked=layerVisible[key]!==false;input.setAttribute('aria-label','Show '+name);input.onchange=()=>{layerVisible[key]=input.checked;sel=null;wireFrom=null;setTool('pan');render();refreshCtx();};label.append(input,document.createTextNode(name));host.appendChild(label);});}
@@ -544,6 +593,10 @@ const DEV={
   panel480:{code:"480V",color:"#E0791B",stripes:["#6B3F1D","#E0791B","#E3C200"]},
   panel208:{code:"208V",color:"#2563EB",stripes:["#1A1A1A","#D32F2F","#2563EB"]}
 };
+const FILL_OPTIONS=[["Racking","rack"],["Conveyor","conveyor"],["Office","office"],["Production","production"],["Open floor","open"],["No-go zone","restricted"]];
+const POI_OPTIONS=[["Dock door","dock","DOCK"],["Entry","entry","IN"],["Stair","stair","ST"],["Mezzanine","mezzanine","MEZZ"],["Obstruction","obstruction","OBS"],["Lift access","lift","LIFT"],["Note","note","NOTE"]];
+for(const [name,type,code] of POI_OPTIONS)DEV["poi_"+type]={code,color:type==="obstruction"?"#C85A36":"#506980",poi:true,name};
+let selectedFill="rack",selectedPoi="dock";
 const WIRE={fa:{color:"#F43F5E",label:"FA wire",dash:[]},comm:{color:"#34D399",label:"Comm wire",dash:[9,5]}};
 let saveTimer=null;
 let persistenceReady=false;
@@ -724,8 +777,7 @@ function nodeName(ref){
   if(ref.kind==="fan")return "Fan "+(o.label||"?");
   return o.label||DEV[o.type].code;}
 function deviceAt(sx,sy){
-  if(layerVisible.devices===false)return null;
-  for(let i=S.devices.length-1;i>=0;i--){const d=S.devices[i];const[cx,cy]=w2s(d.x,d.y);
+  for(let i=S.devices.length-1;i>=0;i--){const d=S.devices[i];if(layerVisible[(DEV[d.type]||{}).poi?"poi":"devices"]===false)continue;const[cx,cy]=w2s(d.x,d.y);
     if(Math.abs(sx-cx)<=DEV_SH+3&&Math.abs(sy-cy)<=DEV_SH+3)return d;}
   return null;}
 function tapAt(sx,sy){
@@ -1070,6 +1122,11 @@ function drawScene(c, tx, fanR, dpr, live){
     if(fillType==="conveyor"){fillConveyor(c,rw,rh,u,dpr);}
     else if(fillType==="office"){fillOffice(c,rw,rh,u,dpr);}
     else if(fillType==="production"){fillProduction(c,rw,rh,u,dpr);}
+    else if(fillType==="open"||fillType==="restricted"){
+      c.fillStyle=fillType==="restricted"?"rgba(222,85,56,.16)":"rgba(55,166,132,.10)";c.fillRect(-rw/2,-rh/2,rw,rh);
+      c.strokeStyle=fillType==="restricted"?"rgba(237,105,76,.65)":"rgba(73,192,151,.45)";c.lineWidth=1.5*dpr;
+      for(let v=-rw-rh;v<rw+rh;v+=22*dpr){c.beginPath();c.moveTo(v,-rh/2);c.lineTo(v+rh,rh/2);c.stroke();}
+    }
     else{
     let guard=0;
     if(horiz){
@@ -1178,7 +1235,7 @@ function drawScene(c, tx, fanR, dpr, live){
     });
   }
   // devices (FAP / controller / keypad / panels)
-  for(const d of visibleItems("devices")){
+  for(const d of S.devices.filter(d=>layerVisible[(DEV[d.type]||{}).poi?"poi":"devices"]!==false)){
     const[x,y]=P(d.x,d.y); const meta=DEV[d.type]||DEV.fap; const sh=DEV_SH*dpr;
     const seld=live&&sel&&sel.kind==="device"&&sel.id===d.id;
     const wfrom=live&&wireFrom&&wireFrom.kind==="device"&&wireFrom.id===d.id;
@@ -1419,21 +1476,21 @@ function handleTap(sx,sy){
   }
   if(tool==="column"){pushHistory();S.columns.push({id:uid(),x:w[0],y:w[1]});render();return;}
   if(tool==="rack"){
-    if(!pending){pending={type:"rack",p1:w};showBanner("Tap the opposite corner of the racking area");render();}
+    if(!pending){pending={type:"rack",p1:w};showBanner("Tap the opposite corner of the "+(FILL_OPTIONS.find(o=>o[1]===selectedFill)||FILL_OPTIONS[0])[0]+" area");render();}
     else{
       const x=Math.min(pending.p1[0],w[0]),y=Math.min(pending.p1[1],w[1]);
       const ww=Math.abs(w[0]-pending.p1[0]),hh=Math.abs(w[1]-pending.p1[1]);
       pending=null;hideBanner();
       if(ww>4&&hh>4){pushHistory();
         const dir=ww>=hh?"h":"v";
-        const r={id:uid(),x,y,w:ww,h:hh,dir,depth:16,aisle:12,bay:8};
+        const r={id:uid(),x,y,w:ww,h:hh,dir,depth:16,aisle:12,bay:8,fill:selectedFill,barrier:selectedFill!=="open"};
         S.racking.push(r);sel={kind:"rack",id:r.id};setTool("pan");openRack(r);}
       render();updateScope();
     }
     return;
   }
-  if(tool==="fap"||tool==="controller"||tool==="keypad"||tool==="panel480"||tool==="panel208"){
-    const tt=tool; pushHistory();
+  if(tool==="fap"||tool==="controller"||tool==="keypad"||tool==="panel480"||tool==="panel208"||tool==="poi"){
+    const tt=tool==="poi"?"poi_"+selectedPoi:tool; pushHistory();
     const dvId=uid();
     S.devices.push({id:dvId,type:tt,x:w[0],y:w[1],label:DEV[tt].code});
     if(tt==="controller"||tt==="keypad"){
@@ -1493,7 +1550,7 @@ function refreshCtx(){
   if(tool==="fan"){renderBrandBar();ctxEl.classList.add("show");return;}
   if(tool==="wire"){renderWireBar();ctxEl.classList.add("show");return;}
   if(tool==="wall"){renderWallBar();ctxEl.classList.add("show");return;}
-  if(["column","room","rack","fap","controller","keypad","panel480","panel208"].includes(tool)){renderHintBar();ctxEl.classList.add("show");return;}
+  if(["column","room","rack","poi","fap","controller","keypad","panel480","panel208"].includes(tool)){renderHintBar();ctxEl.classList.add("show");return;}
   if(tool==="pan"&&sel){renderSelBar();ctxEl.classList.add("show");return;}
   ctxEl.classList.remove("show");
 }
@@ -1512,7 +1569,7 @@ function renderBrandBar(){
 }
 function renderHintBar(){
   ctxInner.innerHTML="";
-  const labels={column:"Tap to drop columns",room:"Tap two corners for a room",rack:"Tap two corners to fill with racking",
+  const labels={column:"Tap to drop columns",room:"Tap two corners for a room",rack:"Tap two corners for "+(FILL_OPTIONS.find(o=>o[1]===selectedFill)||FILL_OPTIONS[0])[0],poi:"Tap to place "+(POI_OPTIONS.find(o=>o[1]===selectedPoi)||POI_OPTIONS[0])[0],
     fap:"Tap to place the fire-alarm panel",controller:"Tap to place the master controller",keypad:"Tap to place a keypad",
     panel480:"Tap to place a 480V panel",panel208:"Tap to place a 120/208V panel"};
   hintSpan(labels[tool]||"");
@@ -1585,7 +1642,7 @@ function renderSelBar(){
     mkBtn("Delete","danger",()=>{pushHistory();removeLinksFor("fan",o.id);S.fans=S.fans.filter(x=>x.id!==o.id);sel=null;refreshCtx();render();updateScope();});
   } else if(sel.kind==="device"){
     hintSpan(nodeName({kind:"device",id:o.id}));
-    mkBtn("Wire","",()=>startWireFrom({kind:"device",id:o.id}));
+    if(!(DEV[o.type]||{}).poi)mkBtn("Wire","",()=>startWireFrom({kind:"device",id:o.id}));
     mkBtn("Label","",()=>editDevice(o));
     mkBtn("Delete","danger",()=>{pushHistory();removeLinksFor("device",o.id);S.devices=S.devices.filter(x=>x.id!==o.id);sel=null;refreshCtx();render();updateScope();});
   } else if(sel.kind==="link"){
@@ -1597,7 +1654,7 @@ function renderSelBar(){
     mkBtn("Delete","danger",()=>{pushHistory();deleteLink(o.id);sel=null;hideBanner();refreshCtx();render();updateScope();});
     mkBtn("Done","",()=>{sel=null;hideBanner();refreshCtx();render();});
   } else if(sel.kind==="rack"){
-    hintSpan(({rack:"Racking",conveyor:"Conveyor",office:"Office",production:"Production"}[o.fill||"rack"])+(o.label?(" · "+o.label):""));
+    hintSpan((FILL_OPTIONS.find(x=>x[1]===(o.fill||"rack"))||FILL_OPTIONS[0])[0]+(o.label?(" · "+o.label):""));
     mkBtn("Edit","",()=>openRack(o));
     mkBtn("Name","",()=>uiPrompt("Area name",o.label||"",v=>{pushHistory();o.label=v||"";render();scheduleSave();}));
     mkBtn(o.barrier===false?"Barrier: off":"Barrier: on","",()=>{pushHistory();o.barrier=(o.barrier===false);refreshCtx();render();scheduleSave();});
@@ -1623,7 +1680,7 @@ function startWireFrom(ref){sel=null;setTool("wire");wireFrom=ref;refreshCtx();r
 function editDevice(d){uiPrompt("Device label",d.label||"",v=>{pushHistory();d.label=v||DEV[d.type].code;render();scheduleSave();});}
 function openRack(r){
   sel={kind:"rack",id:r.id};refreshCtx();render();
-  const FILLOPTS=[["Racking","rack"],["Conveyor","conveyor"],["Office","office"]];
+  const FILLOPTS=FILL_OPTIONS;
   const curFill=r.fill||"rack";
   const toggleRackOnly=f=>{document.getElementById("rkRackOnly").style.display=(f==="rack")?"":"none";};
   buildSeg("rkFill",FILLOPTS.map(o=>o[0]),(FILLOPTS.find(o=>o[1]===curFill)||FILLOPTS[0])[0],v=>{pushHistory();const f=(FILLOPTS.find(o=>o[0]===v)||FILLOPTS[0])[1];r.fill=f;toggleRackOnly(f);render();scheduleSave();});
@@ -1642,7 +1699,7 @@ document.querySelectorAll(".tool[data-tool]").forEach(b=>b.addEventListener("cli
 function setTool(t){tool=t;pending=null;wireFrom=null;hideBanner();if(t!=="pan")sel=null;if(t!=="wall")orthoWall=false;
   document.querySelectorAll(".tool").forEach(x=>x.classList.remove("active"));
   let el=document.querySelector(`.tool[data-tool="${t}"]`);
-  if(!el && ["fan","column","room","rack","fap","controller","keypad","panel480","panel208","wire"].includes(t)) el=document.getElementById("addBtn");
+  if(!el && ["fan","column","room","rack","poi","fap","controller","keypad","panel480","panel208","wire"].includes(t)) el=document.getElementById("addBtn");
   if(el)el.classList.add("active");
   refreshCtx();render();}
 document.getElementById("addBtn").addEventListener("click",()=>openSheet("add"));
@@ -1797,7 +1854,9 @@ document.getElementById("addPanel480").addEventListener("click",()=>{closeSheet(
 document.getElementById("addPanel208").addEventListener("click",()=>{closeSheet("add");setTool("panel208");});
 document.getElementById("addColGrid").addEventListener("click",()=>{closeSheet("add");document.getElementById("cgStatus").textContent="";openSheet("cgrid");});
 document.getElementById("addColumn").addEventListener("click",()=>{closeSheet("add");setTool("column");});
-document.getElementById("addRack").addEventListener("click",()=>{closeSheet("add");setTool("rack");});
+buildSeg("addFillChoices",FILL_OPTIONS.map(o=>o[0]),FILL_OPTIONS[0][0],v=>{selectedFill=FILL_OPTIONS.find(o=>o[0]===v)[1];});
+buildSeg("addPoiChoices",POI_OPTIONS.map(o=>o[0]),"",v=>{selectedPoi=POI_OPTIONS.find(o=>o[0]===v)[1];closeSheet("add");setTool("poi");showBanner("Tap the plan to place "+v+". Tap Move when finished.");});
+document.getElementById("addRack").addEventListener("click",()=>{closeSheet("add");setTool("rack");showBanner("Tap two opposite corners for "+(FILL_OPTIONS.find(o=>o[1]===selectedFill)||FILL_OPTIONS[0])[0]+".");});
 document.getElementById("addRoom").addEventListener("click",()=>{closeSheet("add");setTool("room");});
 document.getElementById("addBuilding").addEventListener("click",()=>{closeSheet("shell");openBuilding();});
 document.getElementById("bldCreate").addEventListener("click",createBuilding);
@@ -2202,7 +2261,7 @@ function svgScene(){
     s+=`<circle cx="${n(px)}" cy="${n(py)}" r="${n(R)}" fill="${brandColor(f.brand)}" stroke="#0b0e13" stroke-width="${n(lw*0.8)}"/>`;
     s+=`<circle cx="${n(px)}" cy="${n(py)}" r="${n(R+lw*1.4)}" fill="none" stroke="${fc}" stroke-width="${n(lw*1.6)}"/>`;
     s+=`<text x="${n(px)}" y="${n(py)}" fill="#fff" font-size="${n(fs*0.62)}" font-weight="bold" text-anchor="middle" dominant-baseline="middle">${esc(f.label)}</text>`;});
-  visibleItems("devices").forEach(d=>{const meta=DEV[d.type]||DEV.fap,w=R*1.7,h=R*1.4,x=d.x-w/2,y=d.y-h/2;
+  S.devices.filter(d=>layerVisible[(DEV[d.type]||{}).poi?"poi":"devices"]!==false).forEach(d=>{const meta=DEV[d.type]||DEV.fap,w=R*1.7,h=R*1.4,x=d.x-w/2,y=d.y-h/2;
     if(meta.stripes){for(let i=0;i<3;i++)s+=`<rect x="${n(x+i*w/3)}" y="${n(y)}" width="${n(w/3)}" height="${n(h)}" fill="${meta.stripes[i]}"/>`;s+=`<rect x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}" fill="none" stroke="#16202e" stroke-width="${n(lw*0.6)}"/>`;}
     else s+=`<rect x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}" rx="${n(R*0.2)}" fill="${meta.color}"/>`;
     s+=`<text x="${n(d.x)}" y="${n(d.y)}" fill="#fff" font-size="${n(fs*0.5)}" font-weight="bold" text-anchor="middle" dominant-baseline="middle">${esc(meta.code)}</text>`;});
@@ -2301,7 +2360,7 @@ function pdfVector(){
     o+=hex(brandColor(f.brand))+' rg ';circle(X(px),Y(py),R);o+='f ';
     o+=hex(fc)+' RG '+f3(lw*1.6)+' w ';circle(X(px),Y(py),R+lw*1.4);o+='S ';
     textC(f.label,px,py,fs*0.62,'1 1 1');});
-  visibleItems("devices").forEach(d=>{const meta=DEV[d.type]||DEV.fap,w=R*1.7,h=R*1.4,x0=X(d.x)-w/2,y0=Y(d.y)-h/2;
+  S.devices.filter(d=>layerVisible[(DEV[d.type]||{}).poi?"poi":"devices"]!==false).forEach(d=>{const meta=DEV[d.type]||DEV.fap,w=R*1.7,h=R*1.4,x0=X(d.x)-w/2,y0=Y(d.y)-h/2;
     if(meta.stripes){for(let i=0;i<3;i++){o+=hex(meta.stripes[i])+' rg '+f3(x0+i*w/3)+' '+f3(y0)+' '+f3(w/3)+' '+f3(h)+' re f ';}o+='0.086 0.125 0.18 RG '+f3(lw*0.6)+' w '+f3(x0)+' '+f3(y0)+' '+f3(w)+' '+f3(h)+' re S ';}
     else{o+=hex(meta.color)+' rg '+f3(x0)+' '+f3(y0)+' '+f3(w)+' '+f3(h)+' re f ';}
     textC(meta.code,d.x,d.y,fs*0.5,'1 1 1');});
