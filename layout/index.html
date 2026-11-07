@@ -436,7 +436,7 @@ textarea.inp{height:84px; padding:10px 12px; resize:vertical; line-height:1.35; 
   <div class="mhead">Structure</div>
   <div class="row">
     <button class="btn" id="addRoom">Room</button>
-    <button class="btn" id="addWallTool">Wall</button>
+    <button class="btn" id="addWallTool">Interior wall</button>
   </div>
   <div class="row">
     <button class="btn" id="addColumn">Column</button>
@@ -461,6 +461,7 @@ textarea.inp{height:84px; padding:10px 12px; resize:vertical; line-height:1.35; 
   </div>
   <div class="field"><label>Inset from walls (ft)</label><input class="inp" id="cgInset" inputmode="decimal" placeholder="0"></div>
   <button class="btn primary" id="cgPlace">Place columns</button>
+  <div class="field" style="margin-top:9px"><button class="btn" id="cgRemove">Remove grid and its columns</button></div>
   <div class="hint" id="cgStatus" style="min-height:18px;margin-top:10px;color:var(--amber2);font-weight:700;"></div>
 </div>
 
@@ -484,7 +485,7 @@ textarea.inp{height:84px; padding:10px 12px; resize:vertical; line-height:1.35; 
 <div class="sheet" id="addrSheet">
   <div class="grab"></div>
   <h3>Building from address</h3>
-  <p class="hint">Pulls the building outline from OpenStreetMap (free map data — not Google). Works when the building is mapped; many warehouses are. It drops the outline to scale — drag the corner dots to fix anything. Needs internet, and only runs on your live site (not the preview).</p>
+  <p class="hint">Search an address or paste latitude, longitude. If an address is missing from OpenStreetMap, use your phone's location outside the building or import a PDF/photo. Confirm the outline and a known dimension before using it.</p>
   <div class="field"><label>Address</label>
     <div style="position:relative;">
       <input class="inp" id="addrInput" style="padding-right:42px;" placeholder="1234 Industrial Pkwy, City, ST" autocapitalize="words">
@@ -492,6 +493,8 @@ textarea.inp{height:84px; padding:10px 12px; resize:vertical; line-height:1.35; 
     </div>
   </div>
   <button class="btn primary" id="addrFind">Find building</button>
+  <div class="field" style="margin-top:9px"><button class="btn" id="addrLocate">Use my location</button></div>
+  <p class="hint">Building data © OpenStreetMap contributors. Online lookup only; the saved plan works offline.</p>
   <div class="hint" id="addrStatus" style="min-height:18px;margin-top:12px;color:var(--amber2);font-weight:700;"></div>
 </div>
 
@@ -1791,7 +1794,7 @@ document.getElementById("mShell").addEventListener("click",()=>{closeSheet("menu
 document.getElementById("shellDone").addEventListener("click",()=>closeSheet("shell"));
 document.getElementById("shellTrace").addEventListener("click",()=>{closeSheet("shell");orthoWall=true;setTool("wall");showBanner("Walk the perimeter: tap each corner (it snaps square), or type feet + a ▸ direction. Tap the start dot to close.");});
 document.getElementById("shellDraw").addEventListener("click",()=>{closeSheet("shell");orthoWall=false;setTool("wall");showBanner("Tap to drop wall corners. Tap the first dot to close the shape.");});
-document.getElementById("addWallTool").addEventListener("click",()=>{closeSheet("add");setTool("wall");});
+document.getElementById("addWallTool").addEventListener("click",()=>{closeSheet("add");orthoWall=false;setTool("wall");showBanner("Draw interior walls. Use Building shell to edit the exterior.");});
 document.getElementById("rotSlider").addEventListener("input",e=>{const v=parseFloat(e.target.value);rotatePlan(v-rotLast);rotSession+=(v-rotLast);rotLast=v;});
 document.getElementById("rotL90").addEventListener("click",()=>{rotatePlan(-90);rotSession-=90;});
 document.getElementById("rotR90").addEventListener("click",()=>{rotatePlan(90);rotSession+=90;});
@@ -1803,36 +1806,67 @@ function pointInPoly(x,y,g){let inside=false;
     if(((yi>y)!=(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi))inside=!inside;}
   return inside;}
 function polyArea(g){let a=0;for(let i=0,j=g.length-1;i<g.length;j=i++){a+=(g[j].lon+g[i].lon)*(g[j].lat-g[i].lat);}return Math.abs(a);}
+function parseCoordinates(q){
+  const m=q.match(/^\s*(-?\d{1,2}(?:\.\d+)?)\s*[, ]\s*(-?\d{1,3}(?:\.\d+)?)\s*$/);
+  if(!m)return null;const lat=Number(m[1]),lng=Number(m[2]);
+  return Math.abs(lat)<=90&&Math.abs(lng)<=180?{lat,lng}:null;
+}
+async function lookupBuilding(lat,lng,approximate){
+  setAddrStatus("Looking for mapped buildings nearby…");
+  const oq="[out:json][timeout:25];(way(around:180,"+lat+","+lng+")[building];);out geom;";
+  const opRes=await fetch("https://overpass-api.de/api/interpreter",{method:"POST",headers:{"Content-Type":"text/plain"},body:oq});
+  if(!opRes.ok)throw Error("Building lookup is unavailable right now ("+opRes.status+"). Try your PDF/photo plan.");
+  const oj=await opRes.json();
+  const ways=((oj&&oj.elements)||[]).filter(e=>e.type==="way"&&e.geometry&&e.geometry.length>=4);
+  if(!ways.length){setAddrStatus("Location found, but no building outline is mapped here. Import a PDF/photo and set its scale.");return;}
+  const distance=w=>{const pts=w.geometry;let x=0,y=0;for(const p of pts){x+=p.lon;y+=p.lat;}x/=pts.length;y/=pts.length;
+    return Math.hypot((x-lng)*111320*Math.cos(lat*Math.PI/180),(y-lat)*111320);};
+  const inside=ways.filter(w=>pointInPoly(lng,lat,w.geometry));
+  const primary=inside.length?inside.reduce((a,b)=>polyArea(b.geometry)>polyArea(a.geometry)?b:a):ways.reduce((a,b)=>distance(a)<distance(b)?a:b);
+  const meters=Math.round(distance(primary));
+  if(!inside.length&&meters>120){setAddrStatus("No mapped building is close enough to this point. Import a PDF/photo or move outside and try My location.");return;}
+  setAddrStatus("Candidate outline found. Confirm it is the right building.");
+  uiConfirm((approximate?"Approximate address match. ":"")+"Use the mapped building near this point"+(inside.length?"":", about "+meters+" m from it")+"? Verify a measured wall length after import.",()=>{
+    drawOsmBuildings([primary],lat,lng);setAddrStatus("");closeSheet("addr");
+  },"Use outline");
+}
 async function findBuildingByAddress(){
   const q=document.getElementById("addrInput").value.trim();
-  if(!q){setAddrStatus("Type an address first.");return;}
-  setAddrStatus("Looking up address…");
+  if(!q){setAddrStatus("Enter an address or latitude, longitude.");return;}
+  const btn=document.getElementById("addrFind");btn.disabled=true;
   try{
-    const geoRes=await fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&q="+encodeURIComponent(q),{headers:{Accept:"application/json"}});
-    const gj=await geoRes.json();
-    if(!gj||!gj.length){setAddrStatus("Couldn't find that address. Check spelling, or try the street + city.");return;}
-    const lat=parseFloat(gj[0].lat), lng=parseFloat(gj[0].lon);
-    setAddrStatus("Found it — checking for a building outline…");
-    const oq="[out:json][timeout:25];(way(around:150,"+lat+","+lng+")[building];);out geom;";
-    const opRes=await fetch("https://overpass-api.de/api/interpreter",{method:"POST",headers:{"Content-Type":"text/plain"},body:oq});
-    const oj=await opRes.json();
-    const ways=((oj&&oj.elements)||[]).filter(e=>e.type==="way"&&e.geometry&&e.geometry.length>=4);
-    if(!ways.length){setAddrStatus("Found the address, but no building outline is mapped here. Load a Google Maps satellite screenshot as a Photo and trace it.");return;}
-    let primary=ways.find(w=>pointInPoly(lng,lat,w.geometry));
-    if(!primary)primary=ways.reduce((a,b)=>polyArea(b.geometry)>polyArea(a.geometry)?b:a);
-    // flood-fill the connected complex: keep buildings whose footprints touch/are within ~13m
-    const margin=0.00012;
-    const bb=w=>{let mnx=1e9,mny=1e9,mxx=-1e9,mxy=-1e9;for(const p of w.geometry){mnx=Math.min(mnx,p.lon);mxx=Math.max(mxx,p.lon);mny=Math.min(mny,p.lat);mxy=Math.max(mxy,p.lat);}return{mnx,mny,mxx,mxy};};
-    const near=(a,b)=>!(a.mnx-b.mxx>margin||b.mnx-a.mxx>margin||a.mny-b.mxy>margin||b.mny-a.mxy>margin);
-    const group=[primary], used=new Set([primary]);
-    let added=true; while(added){added=false;
-      for(const w of ways){if(used.has(w))continue;
-        if(group.some(g=>near(bb(g),bb(w)))){group.push(w);used.add(w);added=true;}}}
-    drawOsmBuildings(group,lat,lng);
-    setAddrStatus("");
-    closeSheet("addr");
-  }catch(e){setAddrStatus("Lookup failed — check your internet. (Online lookups don't work in the in-app preview, only your published site.)");}
+    let pos=parseCoordinates(q),approximate=false;
+    if(!pos){
+      setAddrStatus("Looking up address…");
+      const url="https://nominatim.openstreetmap.org/search?format=json&limit=3&countrycodes=us&q="+encodeURIComponent(q);
+      const res=await fetch(url,{headers:{Accept:"application/json"}});
+      if(!res.ok)throw Error("Address search is unavailable ("+res.status+"). Try coordinates or My location.");
+      let matches=await res.json();
+      if(!matches.length){
+        // Some building numbers and suite identifiers are absent even when the street is mapped.
+        const shorter=q.replace(/\b(?:suite|ste|unit|floor|fl)\s*[\w-]+/ig,"").replace(/^\s*\d+[A-Za-z-]*\s+/,"").replace(/^\s*,\s*/,"").trim();
+        if(shorter&&shorter!==q){await new Promise(resolve=>setTimeout(resolve,1100));
+          const retry=await fetch("https://nominatim.openstreetmap.org/search?format=json&limit=3&countrycodes=us&q="+encodeURIComponent(shorter),{headers:{Accept:"application/json"}});
+          if(retry.ok){matches=await retry.json();approximate=matches.length>0;}
+        }
+      }
+      if(!matches.length){setAddrStatus("Address not in OpenStreetMap. Tap Use my location outside the building, paste coordinates, or import a PDF/photo.");return;}
+      pos={lat:Number(matches[0].lat),lng:Number(matches[0].lon)};
+    }
+    if(!Number.isFinite(pos.lat)||!Number.isFinite(pos.lng))throw Error("No usable coordinates were returned.");
+    await lookupBuilding(pos.lat,pos.lng,approximate);
+  }catch(e){setAddrStatus(e.message||"Lookup failed. Try My location or a scaled PDF/photo.");}
+  finally{btn.disabled=false;}
 }
+document.getElementById("addrLocate").addEventListener("click",()=>{
+  if(!navigator.geolocation){setAddrStatus("Location is unavailable on this phone. Enter coordinates or import a plan.");return;}
+  setAddrStatus("Getting phone location. Step outside for better accuracy…");
+  navigator.geolocation.getCurrentPosition(async p=>{
+    const accuracy=Math.round(p.coords.accuracy);
+    if(accuracy>100){setAddrStatus("Location accuracy is ±"+accuracy+" m. Step outside or enter an address before choosing a building.");return;}
+    try{await lookupBuilding(p.coords.latitude,p.coords.longitude,accuracy>30);}catch(e){setAddrStatus(e.message||"Lookup failed. Import a PDF/photo instead.");}
+  },e=>setAddrStatus("Location unavailable: "+e.message+". Enter an address or import a plan."),{enableHighAccuracy:true,timeout:15000,maximumAge:0});
+});
 function drawOsmBuildings(group,refLat,refLng){
   pushHistory();
   const cc=s2w(innerWidth/2,innerHeight/2);
@@ -2118,6 +2152,23 @@ document.getElementById("bgDone").addEventListener("click",exitBgMode);
 
 /* ---------- fit ---------- */
 document.getElementById("cgPlace").addEventListener("click",generateColumnGrid);
+document.getElementById("cgRemove").addEventListener("click",()=>{
+  if(!S.bayGrid){document.getElementById("cgStatus").textContent="No column grid on this plan.";return;}
+  pushHistory();removeColumnGrid();render();updateScope();
+  document.getElementById("cgStatus").textContent="Grid removed. Undo restores it.";
+});
+function removeColumnGrid(){
+  const g=S.bayGrid;if(!g)return;
+  // Older saved plans have no gridId. Match only positions that still sit on the old grid.
+  S.columns=S.columns.filter(c=>{
+    if(c.gridId)return c.gridId!==g.id;
+    if(g.id)return true;
+    for(let i=0;i<g.nx;i++)for(let j=0;j<g.ny;j++)
+      if(Math.hypot(c.x-(g.px+i*g.ux+j*g.vx),c.y-(g.py+i*g.uy+j*g.vy))<0.01)return false;
+    return true;
+  });
+  S.bayGrid=null;
+}
 function wallBounds(){
   let minx=Infinity,miny=Infinity,maxx=-Infinity,maxy=-Infinity,has=false;
   S.walls.forEach(w=>{has=true;minx=Math.min(minx,w.x1,w.x2);miny=Math.min(miny,w.y1,w.y2);maxx=Math.max(maxx,w.x1,w.x2);maxy=Math.max(maxy,w.y1,w.y2);});
@@ -2134,12 +2185,14 @@ function generateColumnGrid(){
   const x0=b.minx+inset, y0=b.miny+inset, W=(b.maxx-b.minx)-inset*2, H=(b.maxy-b.miny)-inset*2;
   if(W<=0||H<=0){st("Inset is bigger than the building. Lower it.");return;}
   pushHistory();
+  removeColumnGrid();
   const sx=nx>1?W/(nx-1):0, sy=ny>1?H/(ny-1):0;
   const px=x0+(nx>1?0:W/2), py=y0+(ny>1?0:H/2);
+  const gridId=uid();
   for(let i=0;i<nx;i++)for(let j=0;j<ny;j++){
-    S.columns.push({id:uid(),x:px+i*sx,y:py+j*sy});
+    S.columns.push({id:uid(),x:px+i*sx,y:py+j*sy,gridId});
   }
-  S.bayGrid={px,py,ux:sx,uy:0,vx:0,vy:sy,nx,ny};
+  S.bayGrid={id:gridId,px,py,ux:sx,uy:0,vx:0,vy:sy,nx,ny};
   showBayGrid=true;
   render();updateScope();fitAll();
   const fmt=v=>Math.round(v*10)/10;
@@ -2223,7 +2276,7 @@ function renameJob(){uiPrompt("Rename plan",S.job,nm=>{if(!nm||nm===S.job)return
   const st=readStore();delete st.jobs[S.job];S.job=nm;document.getElementById("jobName").textContent=nm;saveAll();});}
 document.getElementById("mClear").addEventListener("click",()=>{closeSheet("menu");
   uiConfirm("Clear everything on this plan?",()=>{
-    pushHistory();S.rooms=[];S.walls=[];S.fans=[];S.columns=[];S.racking=[];S.devices=[];S.links=[];S.bg=null;bgImg=null;S.nextNum=1;sel=null;
+    pushHistory();S.rooms=[];S.walls=[];S.fans=[];S.columns=[];S.bayGrid=null;S.racking=[];S.devices=[];S.links=[];S.taps=[];S.bg=null;bgImg=null;S.nextNum=1;sel=null;
     updatePhotoMenu();render();updateScope();refreshCtx();scheduleSave();},"Clear");});
 document.getElementById("mShare").addEventListener("click",()=>{closeSheet("menu");sharePNG();});
 document.getElementById("mPdf").addEventListener("click",()=>{closeSheet("menu");exportPDF();});
