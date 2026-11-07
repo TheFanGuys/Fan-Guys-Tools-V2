@@ -297,6 +297,8 @@ textarea.inp{height:84px; padding:10px 12px; resize:vertical; line-height:1.35; 
 </div>
 
 <div id="rotpanel">
+  <p class="hint">Square the building to the screen grid. The shell, fans, columns, background and wire routes rotate together; their distances stay the same.</p>
+  <div class="field"><button class="btn primary" id="rotStraighten">Straighten longest exterior wall</button></div>
   <div class="r">
     <button class="btn" id="rotL90">⟲ 90°</button>
     <button class="btn" id="rotR90">90° ⟳</button>
@@ -306,7 +308,7 @@ textarea.inp{height:84px; padding:10px 12px; resize:vertical; line-height:1.35; 
     <button class="btn" id="rotReset">Reset</button>
     <button class="btn primary" id="rotDone">Done</button>
   </div>
-  <p class="hint" style="margin-top:10px;">Rotates the whole plan around its center. Use the fine slider to line an imported building up straight, then tap Done.</p>
+  <p class="hint" style="margin-top:10px;">Fine adjustment: ±45°. Reset reverses changes made in this rotation session. Undo is available after Done.</p>
 </div>
 
 <!-- Fan edit sheet -->
@@ -430,6 +432,7 @@ textarea.inp{height:84px; padding:10px 12px; resize:vertical; line-height:1.35; 
   <div class="field"><button class="btn" id="shellTrace">Trace outline — walk the corners…</button></div>
   <div class="field"><button class="btn" id="addAddress">Building from address…</button></div>
   <div class="field"><button class="btn" id="shellDraw">Draw / edit walls by hand</button></div>
+  <div class="field"><button class="btn" id="shellRotate">Rotate / straighten building…</button></div>
   <button class="btn primary" id="shellDone">Close</button>
 </div>
 
@@ -1801,10 +1804,27 @@ function rotatePlan(deg){
   render();
 }
 function openRotate(){rotSession=0;rotLast=0;document.getElementById("rotSlider").value=0;pushHistory();document.getElementById("rotpanel").classList.add("show");}
+function straightenBuilding(){
+  const exterior=S.walls.filter(w=>w.shell);
+  if(!exterior.length){showBanner("No exterior wall yet. Draw or import the building shell first.");return false;}
+  const longest=exterior.reduce((a,b)=>{
+    const len=w=>(w.x2-w.x1)**2+(w.y2-w.y1)**2;
+    return len(b)>len(a)?b:a;
+  });
+  let angle=Math.atan2(longest.y2-longest.y1,longest.x2-longest.x1)*180/Math.PI;
+  angle=((angle+45)%90+90)%90-45;
+  if(Math.abs(angle)<0.05){showBanner("The longest exterior wall is already aligned with the grid.");return true;}
+  rotatePlan(-angle);rotSession-=angle;
+  rotLast=0;document.getElementById("rotSlider").value=0;
+  fitAll();showBanner("Building squared to the grid. Use Fine to adjust if needed.");
+  return true;
+}
+document.getElementById("rotStraighten").addEventListener("click",straightenBuilding);
 document.getElementById("tLayers").addEventListener("click",()=>openSheet("layers"));
 document.getElementById("mColOff").addEventListener("click",()=>{showColOffsets=!showColOffsets;document.getElementById("mColOff").textContent="Column offsets: "+(showColOffsets?"on":"off");render();});
 document.getElementById("layersDone").addEventListener("click",()=>closeSheet("layers"));
 document.getElementById("mRotate").addEventListener("click",()=>{closeSheet("menu");openRotate();});
+document.getElementById("shellRotate").addEventListener("click",()=>{closeSheet("shell");openRotate();});
 function enterShellEdit(){shellEditMode=true;sel=null;setTool("pan");document.getElementById("shellBar").classList.add("show");openSheet("shell");render();}
 function emptyPlan(){return !S.walls.length&&!S.bg&&!S.fans.length&&!S.columns.length&&!S.racking.length&&!S.rooms.length&&!S.devices.length;}
 function openStartGuide(){if(!VIEWONLY&&emptyPlan())openSheet("start");}
@@ -1862,7 +1882,7 @@ async function lookupBuilding(lat,lng,approximate){
   if(!inside.length&&meters>120){setAddrStatus("No mapped building is close enough to this point. Import a PDF/photo or move outside and try My location.");return;}
   setAddrStatus("Candidate outline found. Confirm it is the right building.");
   uiConfirm((approximate?"Approximate address match. ":"")+"Use the mapped building near this point"+(inside.length?"":", about "+meters+" m from it")+"? Verify a measured wall length after import.",()=>{
-    drawOsmBuildings([primary],lat,lng);setAddrStatus("");closeSheet("addr");
+    drawOsmBuildings([primary],lat,lng);setAddrStatus("");closeSheet("addr");openRotate();
   },"Use outline");
 }
 async function findBuildingByAddress(){
